@@ -45,7 +45,8 @@ Table <next_table_name>
 | Keys field | Meaning |
 |---|---|
 | `[P]` | Primary Key |
-| `[F]` | Foreign Key (expected) |
+| `[I]` | Indexed (Very often used for Foreign Keys) |
+| `[U]` | Unique Constraint |
 | *(blank)* | Regular column |
 
 ### Date/Time encoding (IMPORTANT)
@@ -97,12 +98,18 @@ wp_header
 | Column | Type | Notes |
 |---|---|---|
 | `event_perfno_i` | int (PK) | Internal WO ID |
-| `ac_register` | string | Aircraft registration |
+| `ac_registr` | string | Aircraft registration |
+| `state` | string | WO Status (O=Open, C=Closed) |
+| `mech_sign` | string | Mechanic who performed the WO |
+| `release_sign` | string | Inspector who released the WO |
+| `release_sign2` | string | Second inspector (if required) |
+| `closing_date` | int | Date WO was closed |
 
 #### `workstep_link` — Workstep within a WO
 | Column | Type | Notes |
 |---|---|---|
-| `event_perfno_i` | int (PK) | FK → `wo_header.event_perfno_i` |
+| `workstep_linkno_i` | int (PK) | Unique ID for the workstep link |
+| `event_perfno_i` | int | FK → `wo_header.event_perfno_i` |
 | `descno_i` | int (UNIQUE) | FK → `wo_text_description.descno_i` |
 | `workstep_linkno_i` | int | Used to connect to actions |
 | `sequenceno` | int | Order of the workstep |
@@ -119,17 +126,14 @@ wp_header
 |---|---|---|
 | `actionno_i` | int (PK) | Internal action ID |
 | `event_perfno_i` | int | WO reference |
-| `workstep_linkno_i` | int | Connected via `workstep_link_wo_text_action` |
+| `workstep_linkno_i` | int | FK → `workstep_link.workstep_linkno_i` (direct link) |
 | `text` | string | Action text |
+| `action_comment` | string | Additional comment text |
 | `sign_performed` | string | Who performed the task |
 | `sign_inspected` | string | Who inspected |
 | `sign_double_inspected` | string | Who double-inspected |
-
-#### `workstep_link_wo_text_action` — Junction Table
-| Column | Type | Notes |
-|---|---|---|
-| `workstep_link_workstep_linkno_i` | int (PK part) | FK → `workstep_link.workstep_linkno_i` |
-| `wo_text_action_workstep_linkno_i` | int (PK part) | FK → `wo_text_action.workstep_linkno_i` |
+| `action_date` | int | Date the action was taken |
+| `action_time` | int | Time the action was taken |
 
 #### `time_captured_additional` — Booking ↔ Action Link
 | Column | Type | Notes |
@@ -167,7 +171,8 @@ These are the correctness checks to build queries for:
 ## 💡 Next Steps / Open Questions
 
 - [ ] Confirm the **unit of `duration`** in `time_captured` (likely minutes, but needs verification against the CSV schema).
-- [ ] Find the column in `wo_header` (or linked table) that stores the WO **status** (open/closed/signed-off) — needed for completeness checks.
+- [x] Find the column in `wo_header` (or linked table) that stores the WO **status** — Verified as `state` ('O' for Open, 'C' for Closed) inside `wo_header`.
+- [x] Determine how Work Order Sign-offs are handled — General WO sign-offs are logged in `wo_header` via `mech_sign` and `release_sign`. Step-level sign-offs are in `wo_text_action`.
 - [ ] Find the column that stores the **planned date** of the WO (for schedule adherence checks).
 - [ ] Determine the exact table/column for the **aircraft type/model** (for filtering by fleet type).
 - [ ] Build a template query: **all WOs for aircraft `X` on date `Y`**.
@@ -199,7 +204,7 @@ FROM wo_header wh
 JOIN wp_sequence wps ON wps.event_perfno_i = wh.event_perfno_i
 JOIN wp_header wph   ON wph.wpno_i = wps.wpno_i
 JOIN time_captured tc ON tc.primkey = wh.event_perfno_i
-WHERE wh.ac_register = 'XY-ABC'          -- replace with aircraft registration
+WHERE wh.ac_registr = 'XY-ABC'          -- replace with aircraft registration
   AND (DATE '1971-12-31' + tc.start_date) = '2026-09-01'  -- replace with target date
 ORDER BY tc.start_date, tc.start_time;
 ```

@@ -1,0 +1,9 @@
+step_sequence,step_header,step_description,actionno_i,action_header,action_text,sign_performed,sign_inspected,sign_double_inspected,action_date_real
+1,GENERAL, , , , , , , , 
+2,JOB SET-UP, , , , , , , , 
+3,INSPECT THE BRACKET, , , , , , , , 
+4,INSPECT THE HYDRAULIC PIPE ASSEMBLIES., , , , , , , , 
+5,INSPECT THE HYDRAULIC PIPE ASSEMBLIES AND HOSE, , , , , , , , 
+6,REPLACE THE BRACKET, , , , , , , , 
+7,DO THE TEST OF THE YELLOW HYDRAULIC SYSTEM., , , , , , , , 
+8,CLOSE UP, , , , , , , , 
