@@ -52,7 +52,7 @@ Table <next_table_name>
 ### Date/Time encoding (IMPORTANT)
 AMOS stores dates and times as integers:
 - **Dates** (`DATE_INT`, `int4`): Days since **1971-12-31**. To convert to a real date in PostgreSQL: `DATE '1971-12-31' + <column>::integer`
-- **Times** (`TIMI`, `int4`): Milliseconds since the start of the day. To convert: `<column> / 1000` gives seconds.
+- **Times** (`TIMI` / `TIME`, `int4`): `TIMI` columns are milliseconds since the start of the day. `TIME` columns (like `start_time` in `time_captured`) are **minutes** since day start.
 
 ---
 
@@ -66,6 +66,7 @@ This file was pre-worked and verified. It defines the key table chain for Work O
 wp_header
     └── wp_sequence           (links Workpack → WO)
             └── wo_header     (Work Order / Taskcard)
+                    ├── wo_remarks             (Remarks/Notes for the WO)
                     ├── workstep_link          (ordered steps within the WO)
                     │       ├── wo_text_description   (text of each step)
                     │       └── [via workstep_link_wo_text_action]
@@ -149,10 +150,17 @@ wp_header
 | `user_sign` | string | Who logged the time |
 | `created_by` | string | Who created the record |
 | `start_date` | int | Start date (days since 1971-12-31) |
-| `start_time` | int | Start time (ms since midnight) |
+| `start_time` | int | Start time (**minutes** since midnight) |
 | `end_date` | int | End date (days since 1971-12-31) |
-| `end_time` | int | End time (ms since midnight) |
-| `duration` | int | Duration (unit TBD — likely minutes) |
+| `end_time` | int | End time (**minutes** since midnight) |
+| `duration` | int | Duration (**minutes**) |
+
+#### `wo_remarks` — Remarks for Work Orders
+| Column | Type | Notes |
+|---|---|---|
+| `event_perfno_i` | int (PK) | FK → `wo_header.event_perfno_i` |
+| `recno` | int (PK) | Record number (allows multiple remarks per WO) |
+| `text` | string | The actual remark text |
 
 ---
 
@@ -170,9 +178,10 @@ These are the correctness checks to build queries for:
 
 ## 💡 Next Steps / Open Questions
 
-- [ ] Confirm the **unit of `duration`** in `time_captured` (likely minutes, but needs verification against the CSV schema).
+- [x] Confirm the **unit of `duration`** in `time_captured` — Verified as **minutes** in the CSV. `start_time` and `end_time` are also stored in minutes since day begin.
 - [x] Find the column in `wo_header` (or linked table) that stores the WO **status** — Verified as `state` ('O' for Open, 'C' for Closed) inside `wo_header`.
 - [x] Determine how Work Order Sign-offs are handled — General WO sign-offs are logged in `wo_header` via `mech_sign` and `release_sign`. Step-level sign-offs are in `wo_text_action`.
+- [x] Find where "Remarks (Event or W/O)" are stored — Verified they are stored in `wo_remarks`, linked directly to `wo_header.event_perfno_i`.
 - [ ] Find the column that stores the **planned date** of the WO (for schedule adherence checks).
 - [ ] Determine the exact table/column for the **aircraft type/model** (for filtering by fleet type).
 - [ ] Build a template query: **all WOs for aircraft `X` on date `Y`**.

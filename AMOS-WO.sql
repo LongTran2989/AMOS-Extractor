@@ -87,3 +87,14 @@ ALTER TABLE "time_captured" ADD FOREIGN KEY ("bookingno_i") REFERENCES "time_cap
 ALTER TABLE "time_captured" ADD FOREIGN KEY ("primkey") REFERENCES "wo_header" ("event_perfno_i") DEFERRABLE INITIALLY IMMEDIATE;
 
 ALTER TABLE "wp_sequence" ADD FOREIGN KEY ("wpno_i") REFERENCES "wp_header" ("wpno_i") DEFERRABLE INITIALLY IMMEDIATE;
+
+CREATE TABLE "wo_remarks" (
+  "event_perfno_i" integer,
+  "recordno" integer,
+  "recno" integer,
+  "text" string,
+  PRIMARY KEY ("event_perfno_i", "recno")
+);
+
+ALTER TABLE "wo_remarks" ADD FOREIGN KEY ("event_perfno_i") REFERENCES "wo_header" ("event_perfno_i") DEFERRABLE INITIALLY IMMEDIATE;
+
