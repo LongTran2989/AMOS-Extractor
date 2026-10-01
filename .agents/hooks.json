@@ -1,0 +1,10 @@
+{
+  "read-session-context": {
+    "PreInvocation": [
+      {
+        "type": "command",
+        "command": "powershell -NoProfile -Command \"Get-Content -Raw -Path .\\scripts\\enforce_context.json\""
+      }
+    ]
+  }
+}

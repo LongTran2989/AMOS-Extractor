@@ -17,7 +17,9 @@ CREATE TABLE "workstep_link" (
 
 CREATE TABLE "wo_text_description" (
   "descno_i" integer PRIMARY KEY,
+  "header" string,
   "text" string,
+  "desc_comment" string,
   "text_html" string
 );
 
@@ -25,7 +27,9 @@ CREATE TABLE "wo_text_action" (
   "event_perfno_i" integer NOT NULL,
   "workstep_linkno_i" integer NOT NULL,
   "actionno_i" integer PRIMARY KEY,
+  "header" string,
   "text" string,
+  "action_comment" string,
   "sign_performed" string,
   "sign_inspected" string,
   "sign_double_inspected" string

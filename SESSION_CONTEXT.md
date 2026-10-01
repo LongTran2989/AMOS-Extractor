@@ -23,6 +23,8 @@ The database is PostgreSQL-compatible. We query it using **PostgreSQL syntax** (
 | `Database-Description-AMOS-csv.csv` | Full AMOS database schema export (~45,913 lines). Lists every table and its columns with types and descriptions. |
 | `Database-Description-AMOS.xlsx` | Same schema in Excel format. |
 | `AMOS-WO.sql` | **Verified** schema subset mapping the Work Order data chain — the key reference for extraction queries. |
+| [extract_work_order.sql](file:///h:/AMOS-Extractor/extract_work_order.sql) | **Full Work Order Extraction Query** — complete 1:1 raw data query across all 9 schema tables. |
+| [extract_han_workpacks_today.sql](file:///h:/AMOS-Extractor/extract_han_workpacks_today.sql) | **HAN Station Workpacks Query** — extracts all active Workpacks at station HAN for today with status lookups. |
 
 ---
 
@@ -218,3 +220,22 @@ WHERE wh.ac_registr = 'XY-ABC'          -- replace with aircraft registration
 ORDER BY tc.start_date, tc.start_time;
 ```
 > ⚠️ Column names in `wo_header` may need to be verified against the full CSV schema (e.g., whether the date field is directly in `wo_header` or in a linked table).
+
+---
+
+## 💡 Key Technical Insights & Lessons Learned
+
+- **wo_text_description text storage**: wo_text_description.text is ONLY populated if saved in plain text; otherwise it is NULL. Formatted step descriptions are stored in wo_text_description.text_html. Step titles/summaries are in wo_text_description.header. Always SELECT header, 	ext, and 	ext_html together to ensure full step text extraction.
+- **Work Order vs Work Step sequence numbers**: wp_sequence.seqno (wp_seq_no) identifies a Work Order's position within a Workpack, remaining identical across all work steps of that Work Order. workstep_link.sequenceno (work_step_no) orders individual steps within a Work Order.
+- **No Aliases Policy**: Neither column aliases (AS ...) nor table aliases should be used in SQL queries. Always use full table and column names (wo_header.event_perfno_i) for 1:1 schema clarity.
+
+---
+
+## 🛑 Querying Rules
+
+1. **No Column Combining**: Any SQL query must select and return exactly the column names as they appear in the database. Do not combine or concatenate columns (e.g., no `CONCAT()`, no `||`) within the SQL queries.
+2. **Ask Before Combining**: If a user request implicitly requires combining columns, explicitly ask the user for permission or clarification before doing so.
+3. **No Column Aliases**: DO NOT use column aliases (e.g., AS work_order_id). Keep original column names exactly as they appear in the database schema (e.g., wh.event_perfno_i) so columns can be precisely pinpointed.
+4. **Purpose of Queries**: SQL queries are strictly used for probing the database and validating data correctness. 
+5. **Ultimate Goal**: The end objective is to write software that extracts this raw data, manipulates it in code, and validates its content. Keep raw data extraction as 1:1 with the database schema as possible.
+6. **Building Up Extraction SQL**: We need to progressively build up the SQL to extract useful, structured information from the greater database, always referencing the master CSV schema file to find the right tables and columns.

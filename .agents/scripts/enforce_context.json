@@ -1,0 +1,7 @@
+{
+  "injectSteps": [
+    {
+      "ephemeralMessage": "CRITICAL: You must read H:\\AMOS-Extractor\\SESSION_CONTEXT.md using the view_file tool before making any plans or executing any tools."
+    }
+  ]
+}
