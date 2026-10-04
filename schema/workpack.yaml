@@ -1,0 +1,335 @@
+# Logical entity: Workpack
+# Rules: see schema/_conventions.yaml. AMOS type/keys/vendor description are read from the CSV at load time.
+
+entity: workpack
+description: A maintenance workpack (WP) planned at a station, with its status and responsible department(s).
+root: wp_header
+
+tables:
+  wp_header:
+    role: root
+    meaning: Workpack header, one row per WP.
+    primary_key: [wpno_i]
+  wp_status:
+    role: lookup
+    meaning: Workpack status definitions (name, closed flag).
+    primary_key: [wp_status_id]
+    joins:
+      - { from: wp_header.wp_status, to: wp_status.wp_status_id, type: left, cardinality: "N:1", trust: documented }
+  wp_department_link:
+    role: link
+    meaning: Departments responsible for a workpack. A WP can have several.
+    primary_key: [wp_department_linkno_i]
+    joins:
+      - { from: wp_header.wpno_i, to: wp_department_link.wpno_i, type: left, cardinality: "1:N", trust: probed }
+
+fields:
+  # ---------------- Identification & basic attributes ----------------
+  - column: wp_header.wpno_i
+    name_status: approved
+    name: wp_id
+    trust: probed
+    meaning: Internal unique key of the workpack.
+
+  - column: wp_header.wpno
+    name_status: approved
+    name: wp_no
+    trust: probed
+    meaning: Human-readable workpack name (unique).
+
+  - column: wp_header.description
+    name_status: approved
+    name: wp_desc
+    trust: probed
+
+  - column: wp_header.station
+    name_status: approved
+    name: wp_station
+    trust: probed
+    meaning: Station where the work is planned (e.g. HAN).
+
+  - column: wp_department_link.department
+    name_status: approved
+    name: wp_dept
+    trust: probed
+    multi_valued: true
+    meaning: Department responsible for / handed the WP. One SQL row per department; code groups by wp_id.
+
+  - column: wp_header.ac_registr
+    name_status: approved
+    name: ac_reg
+    trust: probed
+
+  - column: wp_header.ac_typ
+    name_status: proposed
+    proposed_name: wp_ac_type
+    trust: documented
+
+  - column: wp_header.ac_model
+    name_status: proposed
+    proposed_name: wp_ac_model
+    trust: documented
+
+  - column: wp_header.wp_type
+    name_status: proposed
+    proposed_name: wp_type
+    trust: documented
+    enum:
+      source: csv
+      values: { "0": PLANNING Work Package, "1": CRM Work Package }
+
+  - column: wp_header.hidden
+    name_status: proposed
+    proposed_name: wp_maint_class
+    trust: documented
+    enum:
+      source: csv
+      values: { "H": Heavy-Maintenance, "L": Line-Maintenance, "I": Hidden }
+      other: Unclassified (empty or any other value)
+
+  - column: wp_header.responsible
+    name_status: proposed
+    proposed_name: wp_responsible
+    trust: documented
+    meaning: Sign (user code) of the responsible person.
+
+  # ---------------- Status ----------------
+  - column: wp_header.wp_status
+    name_status: proposed
+    proposed_name: wp_status_id
+    trust: documented
+    meaning: Current (present-day) status of the WP. Do NOT use to filter historical activity; use start/end dates.
+    enum:
+      source: lookup
+      lookup: wp_status.name
+
+  - column: wp_status.name
+    name_status: approved
+    name: wp_status_name
+    trust: documented
+
+  - column: wp_status.closed
+    name_status: proposed
+    proposed_name: wp_status_closed
+    trust: documented
+    encoding: bool_yn
+
+  - column: wp_status.resource_allocation_done
+    name_status: proposed
+    proposed_name: wp_status_res_alloc_done
+    trust: documented
+    encoding: bool_yn
+
+  - column: wp_header.ops_status
+    name_status: proposed
+    proposed_name: wp_ops_status
+    trust: documented
+    meaning: OPS confirmation of a planned/moved WP.
+    enum:
+      source: csv
+      values: { "": Default (no request), "Q": Movement queried to OPS, "R": Movement rejected by OPS, "A": Movement approved by OPS }
+
+  - column: wp_header.handed_to_prod
+    name_status: proposed
+    proposed_name: wp_handed_to_prod
+    trust: documented
+    encoding: bool_yn
+
+  - column: wp_header.handed_to_prod_by
+    name_status: proposed
+    proposed_name: wp_handed_by
+    trust: documented
+    meaning: Sign of the user who handed the WP to production. NULL unless handed_to_prod = Y.
+
+  - column: wp_header.handed_to_prod_to
+    name_status: proposed
+    proposed_name: wp_handed_to
+    trust: documented
+    meaning: Sign of the user the WP was handed to. NULL unless handed_to_prod = Y.
+
+  - column: wp_header.handed_to_prod_group
+    name_status: unnamed
+    trust: unusable
+    note: CSV says "role of the group to hand over the WP to production", but it is empty in our DB.
+    use_instead: wp_department_link.department
+
+  - column: wp_header.jobcards_collection_status
+    name_status: proposed
+    proposed_name: wp_jobcards_coll_sts
+    trust: documented
+    enum:
+      source: csv
+      values: { "null": Collection not needed, "0": Collection needed, "2": Collection completed }
+
+  - column: wp_header.events_collection_status
+    name_status: proposed
+    proposed_name: wp_events_coll_sts
+    trust: documented
+    enum:
+      source: csv
+      values: { "null": Collection not needed, "0": Collection needed, "2": Collection completed }
+
+  # ---------------- Scheduled timing ----------------
+  - column: wp_header.start_date
+    name_status: approved
+    name: wp_start_date
+    trust: documented
+    encoding: date_int
+
+  - column: wp_header.start_time
+    name_status: approved
+    name: wp_start_time
+    trust: documented
+    encoding: time_minutes
+
+  - column: wp_header.end_date
+    name_status: proposed
+    proposed_name: wp_end_date
+    trust: documented
+    encoding: date_int
+
+  - column: wp_header.end_time
+    name_status: proposed
+    proposed_name: wp_end_time
+    trust: documented
+    encoding: time_minutes
+
+  # ---------------- Actual timing ----------------
+  - column: wp_header.act_start_date
+    name_status: proposed
+    proposed_name: wp_act_start_date
+    trust: documented
+    encoding: date_int
+
+  - column: wp_header.act_start_time
+    name_status: proposed
+    proposed_name: wp_act_start_time
+    trust: documented
+    encoding: time_minutes
+
+  - column: wp_header.act_end_date
+    name_status: approved
+    name: wp_act_end_date
+    trust: documented
+    encoding: date_int
+
+  - column: wp_header.act_end_time
+    name_status: approved
+    name: wp_act_end_time
+    trust: documented
+    encoding: time_minutes
+
+  # ---------------- Flights ----------------
+  - column: wp_header.arrival_fltno
+    name_status: proposed
+    proposed_name: wp_arr_fltno
+    trust: documented
+
+  - column: wp_header.departure_fltno
+    name_status: proposed
+    proposed_name: wp_dep_fltno
+    trust: documented
+
+  - column: wp_header.inbound_scheduled_date
+    name_status: proposed
+    proposed_name: wp_inbound_date
+    trust: documented
+    encoding: date_int
+
+  - column: wp_header.inbound_scheduled_time
+    name_status: proposed
+    proposed_name: wp_inbound_time
+    trust: documented
+    encoding: time_minutes
+
+  # ---------------- Operational requirements ----------------
+  - column: wp_header.delay
+    name_status: proposed
+    proposed_name: wp_delay
+    trust: documented
+    meaning: Delay duration in minutes (a duration, not a time of day).
+
+  - column: wp_header.non_routine_time
+    name_status: proposed
+    proposed_name: wp_nonroutine_time
+    trust: documented
+    meaning: Additional non-routine time in minutes (a duration).
+
+  - column: wp_header.test_flight
+    name_status: proposed
+    proposed_name: wp_test_flight
+    trust: documented
+    encoding: bool_yn
+
+  - column: wp_header.engrun
+    name_status: proposed
+    proposed_name: wp_eng_run
+    trust: documented
+    encoding: bool_yn
+
+  - column: wp_header.acweigh
+    name_status: proposed
+    proposed_name: wp_ac_weigh
+    trust: documented
+    encoding: bool_yn
+
+  - column: wp_header.ndt_req
+    name_status: proposed
+    proposed_name: wp_ndt_req
+    trust: documented
+    encoding: bool_yn
+
+  - column: wp_header.def_req
+    name_status: proposed
+    proposed_name: wp_defuel_req
+    trust: documented
+    encoding: bool_yn
+
+  - column: wp_header.jack_req
+    name_status: proposed
+    proposed_name: wp_jack_req
+    trust: documented
+    encoding: bool_yn
+
+  # ---------------- Remarks ----------------
+  - column: wp_header.remarks
+    name_status: proposed
+    proposed_name: wp_remarks
+    trust: documented
+
+  - column: wp_header.internal_remarks
+    name_status: proposed
+    proposed_name: wp_int_remarks
+    trust: documented
+
+# Computed in code only, never in SQL
+derived:
+  - name_status: proposed
+    proposed_name: wp_start
+    from: [wp_header.start_date, wp_header.start_time]
+    transform: { kind: datetime, date: date_int, time: time_minutes }
+    meaning: Scheduled start as a real timestamp.
+
+  - name_status: proposed
+    proposed_name: wp_end
+    from: [wp_header.end_date, wp_header.end_time]
+    transform: { kind: datetime, date: date_int, time: time_minutes }
+
+  - name_status: proposed
+    proposed_name: wp_act_start
+    from: [wp_header.act_start_date, wp_header.act_start_time]
+    transform: { kind: datetime, date: date_int, time: time_minutes }
+
+  - name_status: proposed
+    proposed_name: wp_act_end
+    from: [wp_header.act_end_date, wp_header.act_end_time]
+    transform: { kind: datetime, date: date_int, time: time_minutes }
+
+  - name_status: proposed
+    proposed_name: wp_inbound
+    from: [wp_header.inbound_scheduled_date, wp_header.inbound_scheduled_time]
+    transform: { kind: datetime, date: date_int, time: time_minutes }
+
+notes:
+  - "Active in a date range [A, B]: start_date <= B AND end_date >= A (overlap test on scheduled dates)."
+  - "Joining wp_department_link repeats the WP row once per department (1:N). Group by wp_id in code."

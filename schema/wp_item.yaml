@@ -1,0 +1,31 @@
+entity: wp_item
+description: Workpack sequence item connecting WP to WO
+root: wp_sequence
+tables:
+  wp_sequence:
+    role: root
+    primary_key: [wp_sequence_id]
+    joins:
+      - { from: wp_sequence.wpno_i, to: wp_header.wpno_i, type: left, cardinality: "N:1", trust: probed }
+      - { from: wp_sequence.event_perfno_i, to: wo_header.event_perfno_i, type: left, cardinality: "1:1", trust: probed }
+fields:
+  - column: wp_sequence.wp_sequence_id
+    name_status: unnamed
+    trust: documented
+  - column: wp_sequence.seqno_prefix_i
+    name_status: approved
+    name: wp_seq_1st
+    trust: probed
+  - column: wp_sequence.seqno
+    name_status: approved
+    name: wp_seq_2nd
+    trust: probed
+  - column: wp_sequence.seqno_prefix_i2
+    name_status: unnamed
+    trust: documented
+  - column: wp_sequence.seqno_prefix
+    name_status: unnamed
+    trust: documented
+  - column: wp_sequence.seqno2
+    name_status: unnamed
+    trust: documented

@@ -1,0 +1,61 @@
+# AMOS-Extractor — Schema Conventions
+# Single source of truth for HOW entity files in schema/ are written and interpreted.
+#
+# Division of truth:
+#   - Database-Description-AMOS-csv.csv = PHYSICAL truth (which tables/columns exist, AMOS type, pg type, keys,
+#     vendor description). Never copied into schema/ — the loader reads it at load time.
+#   - schema/*.yaml = LOGICAL truth (our names, aliases, joins, cardinality, enums, trust, derivations, findings).
+
+version: 1
+
+naming:
+  # Canonical logical name of a field. Used in code and docs.
+  pattern: "^[a-z][a-z0-9_]*$"
+  unique: global            # a name may appear only once across ALL entity files
+  approval: user_only       # only the user approves names; the agent may only propose
+  name_status:
+    approved: Name is locked. Queries MUST select the column with the generated alias.
+    proposed: Suggested by the agent, awaiting user approval. No alias may be used yet.
+    unnamed:  No name yet. Queries select the raw column without alias.
+  # Entity prefixes for new names
+  prefixes:
+    wp_: workpack
+    wpi_: workpack item (wp_sequence)
+    wo_: work order / wo_header container
+    ws_: workstep (workstep_link, wo_text_description, wo_text_action)
+    tb_: time booking (time_captured, time_captured_additional)
+    ac_: aircraft attributes
+  # Names approved before this schema existed; they keep their names even though they don't follow the prefixes
+  grandfathered: [wp_seq_1st, wp_seq_2nd, workstep_no, wp_it_sts, ac_reg]
+
+alias:
+  # SQL column alias is ALWAYS derived from the approved name, never written by hand.
+  rule: "z_ + UPPERCASE(name)"     # wp_id -> z_WP_ID
+  table_aliases: forbidden         # always write full table names
+
+trust:
+  documented: Column exists in the AMOS CSV. Not yet confirmed to hold sensible data in our DB.
+  probed:     A query ran on the live DB and returned sensible data for this column.
+  unusable:   Exists in the CSV but is empty/deprecated/misleading in our DB. Must state `note` and, if known, `use_instead`.
+
+raw_vs_derived:
+  sql: raw columns only, 1:1, no concatenation, no conversion
+  code: computes everything declared under `derived:` in entity files
+
+# AMOS integer encodings, referenced by `transform` in derived fields
+encodings:
+  date_int:
+    amos_types: [DATE, DATE_INT]
+    epoch: "1971-12-31"
+    unit: days
+    example: "DATE '1971-12-31' + 20000"   # for ad-hoc probing only; production code converts
+  time_minutes:
+    amos_types: [TIME]
+    unit: minutes_since_midnight
+  time_millis:
+    amos_types: [TIMI]
+    unit: milliseconds_since_midnight
+  bool_yn:
+    amos_types: [BOOL]
+    values: { "Y": true, "N": false }
+    other: treat as false unless the field says otherwise

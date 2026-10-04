@@ -1,0 +1,66 @@
+entity: workstep
+description: Work steps and their text actions/descriptions
+root: workstep_link
+tables:
+  workstep_link:
+    role: root
+    primary_key: [workstep_linkno_i]
+    joins:
+      - { from: workstep_link.event_perfno_i, to: wo_header.event_perfno_i, type: left, cardinality: "N:1", trust: probed }
+  wo_text_description:
+    role: child
+    primary_key: [descno_i]
+    joins:
+      - { from: workstep_link.descno_i, to: wo_text_description.descno_i, type: left, cardinality: "1:1", trust: probed }
+  wo_text_action:
+    role: child
+    primary_key: [actionno_i]
+    joins:
+      - { from: wo_text_action.workstep_linkno_i, to: workstep_link.workstep_linkno_i, type: left, cardinality: "N:1", trust: probed }
+fields:
+  - column: workstep_link.workstep_linkno_i
+    name_status: unnamed
+    trust: documented
+  - column: workstep_link.descno_i
+    name_status: unnamed
+    trust: documented
+  - column: workstep_link.sequenceno
+    name_status: approved
+    name: workstep_no
+    trust: probed
+  - column: wo_text_description.header
+    name_status: approved
+    name: wp_it_header
+    trust: probed
+  - column: wo_text_description.text
+    name_status: approved
+    name: wp_it_text
+    trust: probed
+  - column: wo_text_description.desc_comment
+    name_status: unnamed
+    trust: documented
+  - column: wo_text_description.text_html
+    name_status: approved
+    name: wp_it_text_html
+    trust: probed
+  - column: wo_text_action.actionno_i
+    name_status: unnamed
+    trust: documented
+  - column: wo_text_action.header
+    name_status: unnamed
+    trust: documented
+  - column: wo_text_action.text
+    name_status: unnamed
+    trust: documented
+  - column: wo_text_action.action_comment
+    name_status: unnamed
+    trust: documented
+  - column: wo_text_action.sign_performed
+    name_status: unnamed
+    trust: documented
+  - column: wo_text_action.sign_inspected
+    name_status: unnamed
+    trust: documented
+  - column: wo_text_action.sign_double_inspected
+    name_status: unnamed
+    trust: documented

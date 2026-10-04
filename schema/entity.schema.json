@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "amos-extractor/entity.schema.json",
+  "title": "AMOS logical entity",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["entity", "description", "root", "tables", "fields"],
+  "properties": {
+    "entity": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+    "description": { "type": "string" },
+    "root": { "$ref": "#/$defs/tableName" },
+    "tables": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "$ref": "#/$defs/tableName" },
+      "additionalProperties": { "$ref": "#/$defs/table" }
+    },
+    "fields": { "type": "array", "items": { "$ref": "#/$defs/field" } },
+    "derived": { "type": "array", "items": { "$ref": "#/$defs/derived" } },
+    "notes": { "type": "array", "items": { "type": "string" } }
+  },
+  "$defs": {
+    "tableName": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+    "columnRef": { "type": "string", "pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$" },
+    "logicalName": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+    "trust": { "enum": ["documented", "probed", "unusable"] },
+
+    "table": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "role": { "enum": ["root", "lookup", "link", "child"] },
+        "meaning": { "type": "string" },
+        "primary_key": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "joins": { "type": "array", "items": { "$ref": "#/$defs/join" }, "minItems": 1 }
+      }
+    },
+
+    "join": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["from", "to", "type", "cardinality"],
+      "properties": {
+        "from": { "$ref": "#/$defs/columnRef" },
+        "to": { "$ref": "#/$defs/columnRef" },
+        "type": { "enum": ["inner", "left"] },
+        "cardinality": { "enum": ["1:1", "1:N", "N:1"], "description": "Seen from `from` to `to`." },
+        "trust": { "$ref": "#/$defs/trust" },
+        "note": { "type": "string" }
+      }
+    },
+
+    "enum": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source"],
+      "properties": {
+        "source": { "enum": ["csv", "user", "lookup"] },
+        "lookup": { "$ref": "#/$defs/columnRef", "description": "Required when source = lookup: column holding the display value." },
+        "values": {
+          "type": "object",
+          "description": "Code -> meaning. Use \"\" for empty string and \"null\" for SQL NULL.",
+          "additionalProperties": { "type": "string" }
+        },
+        "other": { "type": "string", "description": "Meaning of any value not listed." }
+      },
+      "allOf": [
+        { "if": { "properties": { "source": { "const": "lookup" } } }, "then": { "required": ["lookup"] } },
+        { "if": { "properties": { "source": { "enum": ["csv", "user"] } } }, "then": { "required": ["values"] } }
+      ]
+    },
+
+    "naming": {
+      "oneOf": [
+        {
+          "properties": { "name_status": { "const": "approved" }, "name": { "$ref": "#/$defs/logicalName" } },
+          "required": ["name_status", "name"],
+          "not": { "required": ["proposed_name"] }
+        },
+        {
+          "properties": { "name_status": { "const": "proposed" }, "proposed_name": { "$ref": "#/$defs/logicalName" } },
+          "required": ["name_status", "proposed_name"],
+          "not": { "required": ["name"] }
+        },
+        {
+          "properties": { "name_status": { "const": "unnamed" } },
+          "required": ["name_status"],
+          "not": { "anyOf": [{ "required": ["name"] }, { "required": ["proposed_name"] }] }
+        }
+      ]
+    },
+
+    "field": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["column", "name_status", "trust"],
+      "allOf": [{ "$ref": "#/$defs/naming" }],
+      "properties": {
+        "column": { "$ref": "#/$defs/columnRef" },
+        "name_status": { "enum": ["approved", "proposed", "unnamed"] },
+        "name": true,
+        "proposed_name": true,
+        "trust": { "$ref": "#/$defs/trust" },
+        "meaning": { "type": "string", "description": "Our plain-language meaning. The AMOS description is read from the CSV." },
+        "multi_valued": { "type": "boolean", "description": "True if one entity row can yield several values (1:N join)." },
+        "encoding": { "enum": ["date_int", "time_minutes", "time_millis", "bool_yn"] },
+        "enum": { "$ref": "#/$defs/enum" },
+        "note": { "type": "string" },
+        "use_instead": { "$ref": "#/$defs/columnRef" }
+      },
+      "if": { "properties": { "trust": { "const": "unusable" } } },
+      "then": { "required": ["note"] }
+    },
+
+    "derived": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name_status", "from", "transform"],
+      "allOf": [{ "$ref": "#/$defs/naming" }],
+      "properties": {
+        "name_status": { "enum": ["approved", "proposed", "unnamed"] },
+        "name": true,
+        "proposed_name": true,
+        "from": { "type": "array", "items": { "$ref": "#/$defs/columnRef" }, "minItems": 1 },
+        "transform": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind"],
+          "properties": {
+            "kind": { "enum": ["datetime", "date", "time", "sequence_label"] },
+            "date": { "enum": ["date_int"] },
+            "time": { "enum": ["time_minutes", "time_millis"] },
+            "separator": { "type": "string" }
+          }
+        },
+        "meaning": { "type": "string" }
+      }
+    }
+  }
+}

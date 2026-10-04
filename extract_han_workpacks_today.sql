@@ -4,11 +4,11 @@
 
 SELECT
     -- Workpack Identification & Basic Attributes
-    wp_header.wpno_i,
-    wp_header.wpno,
-    wp_header.description,
-    wp_header.station,
-    wp_header.ac_registr,
+    wp_header.wpno_i AS z_WP_ID,
+    wp_header.wpno AS z_WP_NO,
+    wp_header.description AS z_WP_DESC,
+    wp_header.station AS z_WP_STATION,
+    wp_header.ac_registr AS z_AC_REG,
     wp_header.ac_typ,
     wp_header.ac_model,
     wp_header.wp_type,
@@ -17,7 +17,7 @@ SELECT
 
     -- Workpack Status Attributes (from wp_header and wp_status lookup)
     wp_header.wp_status,
-    wp_status.name,
+    wp_status.name AS z_WP_STATUS_NAME,
     wp_status.closed,
     wp_status.resource_allocation_done,
     wp_header.ops_status,
@@ -28,16 +28,16 @@ SELECT
     wp_header.events_collection_status,
 
     -- Scheduled Timing (AMOS Integer Dates & Time in Minutes)
-    wp_header.start_date,
-    wp_header.start_time,
+    wp_header.start_date AS z_WP_START_DATE,
+    wp_header.start_time AS z_WP_START_TIME,
     wp_header.end_date,
     wp_header.end_time,
 
     -- Actual / Real Timing
     wp_header.act_start_date,
     wp_header.act_start_time,
-    wp_header.act_end_date,
-    wp_header.act_end_time,
+    wp_header.act_end_date AS z_WP_ACT_END_DATE,
+    wp_header.act_end_time AS z_WP_ACT_END_TIME,
 
     -- Flight & Operational Inbound/Outbound Info
     wp_header.arrival_fltno,

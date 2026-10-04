@@ -6,7 +6,7 @@ SELECT
     -- 1. wo_header (Work Order Header)
     wo_header.event_perfno_i,
     wo_header.ac_registr,
-    wo_header.state,
+    wo_header.state AS z_WP_IT_STS,
     wo_header.mech_sign,
     wo_header.release_sign,
     wo_header.release_sign2,
@@ -14,28 +14,28 @@ SELECT
 
     -- 2. wp_sequence (WO-in-WP Sequence Components, e.g., 4.34)
     wp_sequence.wp_sequence_id,
-    wp_sequence.seqno_prefix_i,
+    wp_sequence.seqno_prefix_i AS z_WP_SEQ_1ST,
     wp_sequence.seqno_prefix_i2,
     wp_sequence.seqno_prefix,
-    wp_sequence.seqno,
+    wp_sequence.seqno AS z_WP_SEQ_2ND,
     wp_sequence.seqno2,
 
     -- 3. wp_header (Workpack Header)
-    wp_header.wpno_i,
-    wp_header.wpno,
+    wp_header.wpno_i AS z_WP_ID,
+    wp_header.wpno AS z_WP_NO,
     wp_header.wp_status,
-    wp_header.station,
+    wp_header.station AS z_WP_STATION,
 
     -- 4. workstep_link (Step Sequence inside WO)
     workstep_link.workstep_linkno_i,
     workstep_link.descno_i,
-    workstep_link.sequenceno,
+    workstep_link.sequenceno AS z_WORKSTEP_NO,
 
     -- 5. wo_text_description (Step Text Description: Plain, HTML, Header)
-    wo_text_description.header,
-    wo_text_description.text,
+    wo_text_description.header AS z_WP_IT_HEADER,
+    wo_text_description.text AS z_WP_IT_TEXT,
     wo_text_description.desc_comment,
-    wo_text_description.text_html,
+    wo_text_description.text_html AS z_WP_IT_TEXT_HTML,
 
     -- 6. wo_text_action (Step Execution Actions & Sign-offs)
     wo_text_action.actionno_i,

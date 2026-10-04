@@ -1,0 +1,36 @@
+entity: part_request
+description: Part requests (materials) for maintenance events (e.g. Worksteps)
+root: part_request_2
+tables:
+  part_request_2:
+    role: root
+    primary_key: [part_requestno_i]
+    joins:
+      - { from: part_request_2.event_key, to: workstep_link.workstep_linkno_i, type: left, cardinality: "N:1", trust: probed, note: "Requires part_request_2.event_type = 'WSL' for Workstep level linkage" }
+fields:
+  - column: part_request_2.part_requestno_i
+    name_status: unnamed
+    trust: documented
+  - column: part_request_2.partno
+    name_status: approved
+    name: part_no
+    trust: probed
+    note: "The PN required to perform the sequence (down to the workstep level)"
+  - column: part_request_2.qty
+    name_status: approved
+    name: part_qty
+    trust: probed
+    note: "Required quantity of such PN"
+  - column: part_request_2.percentage
+    name_status: unnamed
+    trust: probed
+    note: "After each use, the qty will subtract that percentage"
+  - column: part_request_2.externally_provisioned
+    name_status: unnamed
+    trust: probed
+    note: "Y if the PN is coming from customers"
+  - column: part_request_2.no_pcf
+    name_status: approved
+    name: part_no_pcf
+    trust: probed
+    note: "PN not included in the forecast (needs attention)"

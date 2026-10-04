@@ -1,0 +1,108 @@
+entity: workorder
+description: Work Order (Taskcard)
+root: wo_header
+tables:
+  wo_header:
+    role: root
+    primary_key: [event_perfno_i]
+  taskcard_coversheet_info:
+    role: lookup
+    primary_key: [ext_workorderno, sequence]
+    joins:
+      - { from: wo_header.ext_workorderno, to: taskcard_coversheet_info.ext_workorderno, type: left, cardinality: "1:N", trust: probed }
+  wo_remarks:
+    role: child
+    primary_key: [event_perfno_i, recno]
+    joins:
+      - { from: wo_header.event_perfno_i, to: wo_remarks.event_perfno_i, type: left, cardinality: "1:N", trust: probed }
+  wo_event_link:
+    role: lookup
+    primary_key: [event_perfno_i]
+    joins:
+      - { from: wo_header.event_perfno_i, to: wo_event_link.event_perfno_i, type: left, cardinality: "1:1", trust: probed }
+  event_template:
+    role: lookup
+    primary_key: [event_perfno_i]
+    joins:
+      - { from: wo_header.event_perfno_i, to: event_template.event_perfno_i, type: left, cardinality: "1:1", trust: probed }
+  work_template:
+    role: lookup
+    primary_key: [wtno_i]
+    joins:
+      - { from: event_template.wtno_i, to: work_template.wtno_i, type: left, cardinality: "1:1", trust: probed }
+  wp_history:
+    role: lookup
+    primary_key: [event_perfno_i]
+    joins:
+      - { from: wo_header.event_perfno_i, to: wp_history.event_perfno_i, type: left, cardinality: "1:N", trust: probed }
+
+fields:
+  - column: wo_header.event_perfno_i
+    name_status: unnamed
+    trust: documented
+  - column: wo_header.ac_registr
+    name_status: unnamed
+    trust: documented
+  - column: wo_header.state
+    name_status: approved
+    name: wp_it_sts
+    trust: probed
+  - column: wo_header.mech_sign
+    name_status: unnamed
+    trust: documented
+  - column: wo_header.release_sign
+    name_status: unnamed
+    trust: documented
+  - column: wo_header.release_sign2
+    name_status: unnamed
+    trust: documented
+  - column: wo_header.closing_date
+    name_status: unnamed
+    trust: documented
+  - column: wo_header.type
+    name_status: unnamed
+    trust: documented
+
+  - column: taskcard_coversheet_info.taskcard_number
+    name_status: unnamed
+    trust: documented
+  - column: taskcard_coversheet_info.field_name
+    name_status: unnamed
+    trust: documented
+  - column: taskcard_coversheet_info.field_value
+    name_status: unnamed
+    trust: documented
+  - column: taskcard_coversheet_info.sequence
+    name_status: unnamed
+    trust: documented
+  - column: taskcard_coversheet_info.type
+    name_status: unnamed
+    trust: documented
+  - column: wo_remarks.recno
+    name_status: unnamed
+    trust: documented
+  - column: wo_remarks.recordno
+    name_status: unnamed
+    trust: documented
+  - column: wo_remarks.text
+    name_status: unnamed
+    trust: documented
+  - column: wo_event_link.event_name
+    name_status: approved
+    name: wp_it_name
+    trust: probed
+  - column: wo_event_link.event_display
+    name_status: approved
+    name: wp_it_name_1
+    trust: probed
+  - column: work_template.template_title
+    name_status: unnamed
+    trust: probed
+  - column: wo_header.shopcard_title
+    name_status: unnamed
+    trust: probed
+  - column: wp_history.event_name
+    name_status: approved
+    name: wp_it_name_2
+    trust: probed
+
