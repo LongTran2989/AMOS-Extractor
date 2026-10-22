@@ -26,6 +26,10 @@ The database is PostgreSQL-compatible. We query it using **PostgreSQL syntax** (
 | [extract_work_order.sql](file:///g:/AMOS-Extractor/extract_work_order.sql) | **Full Work Order Extraction Query** — complete 1:1 raw data query across all 9 schema tables. |
 | [extract_han_workpacks_today.sql](file:///g:/AMOS-Extractor/extract_han_workpacks_today.sql) | **HAN Station Workpacks Query** — extracts all active Workpacks at station HAN for today with status lookups. |
 | [extract_han_workpacks_date_range.sql](file:///g:/AMOS-Extractor/extract_han_workpacks_date_range.sql) | **Station Workpacks in Date Range** — sample: WPs at HAN overlapping 2026-09-22..2026-09-26, with status and responsible department. Uses approved `z_` aliases. |
+| [extract_wp_seqs_parameterized.sql](file:///g:/AMOS-Extractor/extract_wp_seqs_parameterized.sql) | **Parameterized WP Sequences Query** — extracts active/recent Workpacks at HAN/NTHN down to item, workstep, description, and required materials (part requests). |
+| [extract_wp_timebookings.sql](file:///g:/AMOS-Extractor/extract_wp_timebookings.sql) | **Workpack Timebookings Query** — extracts active/recent Workpacks at HAN/NTHN down to item sequences, worksteps, action execution, and associated time bookings. |
+| [extract_wp_timebookings_history.sql](file:///g:/AMOS-Extractor/extract_wp_timebookings_history.sql) | **Workpack Timebookings & Modification History Query** — extracts active/recent Workpacks at HAN/NTHN down to worksteps, time bookings, and modification history audit records from `time_captured_history` (History Viewer). |
+| [extract_wp_timebookings_seq_4_7.sql](file:///g:/AMOS-Extractor/extract_wp_timebookings_seq_4_7.sql) | **Specific Sequence Timebookings Query** — extracts timebookings and modification history for sequence 4.7 of WP `A620-040326-BASE-MCC-STO`. |
 
 ---
 

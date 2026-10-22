@@ -7,11 +7,15 @@ tables:
     primary_key: [bookingno_i]
     joins:
       - { from: time_captured.bookingno_i, to: time_captured_additional.bookingno_i, type: left, cardinality: "1:1", trust: probed }
+      - { from: time_captured.bookingno_i, to: time_captured_history.bookingno_i, type: left, cardinality: "1:N", trust: documented }
   time_captured_additional:
     role: link
     primary_key: [bookingno_i]
     joins:
       - { from: time_captured_additional.itemno_i, to: wo_text_action.actionno_i, type: left, cardinality: "N:1", trust: probed }
+  time_captured_history:
+    role: child
+    primary_key: [historyno_i]
 fields:
   - column: time_captured.bookingno_i
     name_status: unnamed
@@ -20,6 +24,9 @@ fields:
     name_status: unnamed
     trust: documented
   - column: time_captured.created_by
+    name_status: unnamed
+    trust: documented
+  - column: time_captured.created_date
     name_status: unnamed
     trust: documented
   - column: time_captured.start_date
@@ -37,9 +44,39 @@ fields:
   - column: time_captured.duration
     name_status: unnamed
     trust: documented
+  - column: time_captured.mutation
+    name_status: unnamed
+    trust: documented
+  - column: time_captured.mutation_time
+    name_status: unnamed
+    trust: documented
+  - column: time_captured.mutator
+    name_status: unnamed
+    trust: documented
   - column: time_captured.primkey
     name_status: unnamed
     trust: documented
   - column: time_captured_additional.itemno_i
+    name_status: unnamed
+    trust: documented
+  - column: time_captured_history.historyno_i
+    name_status: unnamed
+    trust: documented
+  - column: time_captured_history.change_comment
+    name_status: unnamed
+    trust: documented
+  - column: time_captured_history.created_by_org
+    name_status: unnamed
+    trust: documented
+  - column: time_captured_history.created_date_org
+    name_status: unnamed
+    trust: documented
+  - column: time_captured_history.mutation_org
+    name_status: unnamed
+    trust: documented
+  - column: time_captured_history.mutator_org
+    name_status: unnamed
+    trust: documented
+  - column: time_captured_history.mutation_time_org
     name_status: unnamed
     trust: documented

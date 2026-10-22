@@ -8,6 +8,7 @@
 erDiagram
   part_request_2 }o--|| workstep_link : "part_request_2.event_key -> workstep_link.workstep_linkno_i"
   time_captured ||--|| time_captured_additional : "time_captured.bookingno_i -> time_captured_additional.bookingno_i"
+  time_captured ||--o{ time_captured_history : "time_captured.bookingno_i -> time_captured_history.bookingno_i"
   time_captured_additional }o--|| wo_text_action : "time_captured_additional.itemno_i -> wo_text_action.actionno_i"
   wo_header ||--o{ taskcard_coversheet_info : "wo_header.ext_workorderno -> taskcard_coversheet_info.ext_workorderno"
   wo_header ||--o{ wo_remarks : "wo_header.event_perfno_i -> wo_remarks.event_perfno_i"
@@ -46,13 +47,24 @@ Time bookings for work steps
 | `time_captured.bookingno_i` |  |  | INT (int4) | documented | Primary key for a booking step. |
 | `time_captured.user_sign` |  |  | SG (varchar(8)) | documented | The sign of the user who performed the booking step. |
 | `time_captured.created_by` |  |  | SG (varchar(8)) | documented | The AMOS user who created this record. |
+| `time_captured.created_date` |  |  | DATE (int4) | documented | The creation date of this record, stored as days since 31.Dec.1971. |
 | `time_captured.start_date` |  |  | DATE_INT (int4) | documented | The date the booking step was started, stored as days since 31.Dec.1971. |
 | `time_captured.start_time` |  |  | TIME (int4) | documented | The time the booking step was started, stored as minutes since day begin. |
 | `time_captured.end_date` |  |  | DATE_INT (int4) | documented | The date the booking step was stopped, stored as days since 31.Dec.1971. |
 | `time_captured.end_time` |  |  | TIME (int4) | documented | The time the booking step was stopped, stored as minutes since day begin. |
 | `time_captured.duration` |  |  | TIME_AMO (int4) | documented | The duration in minutes. This is always the difference between end and start time. |
+| `time_captured.mutation` |  |  | DATE (int4) | documented | The mutation date of this record, stored as days since 31.Dec.1971. |
+| `time_captured.mutation_time` |  |  | TIMI (int4) | documented | The time when this record was added or changed, stored as milliseconds since the start of the day. |
+| `time_captured.mutator` |  |  | SG (varchar(8)) | documented | The AMOS user who changed this record. |
 | `time_captured.primkey` |  |  | INT (int4) | documented | The primary key of the task. |
 | `time_captured_additional.itemno_i` |  |  | INT (int4) | documented | Foreign key for a specific item within a document. This could be an action on a WO or an item on a task card. The value depends on the MIME type of the corresponding entry in the time_captured table. |
+| `time_captured_history.historyno_i` |  |  | INT (int4) | documented | Primary key of the time_captured_history table. |
+| `time_captured_history.change_comment` |  |  | ALPHANUM (varchar(100)) | documented | Comment or reason for the change to the time booking. |
+| `time_captured_history.created_by_org` |  |  | SG (varchar(8)) | documented | The original AMOS user who created this record. |
+| `time_captured_history.created_date_org` |  |  | DATE (int4) | documented | The original creation date of this record as an AMOS date (number of days since 31.Dec.1971). |
+| `time_captured_history.mutation_org` |  |  | DATE_INT (int4) | documented | The original mutation date of this record as an AMOS date (number of days since 31.Dec.1971). |
+| `time_captured_history.mutator_org` |  |  | SG (varchar(8)) | documented | The original AMOS user who created or last changed this record. |
+| `time_captured_history.mutation_time_org` |  |  | TIME (int4) | documented | The original time when this record was added or changed, in milliseconds since the start of the day. |
 
 ## workorder
 
