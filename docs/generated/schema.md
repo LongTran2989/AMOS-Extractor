@@ -156,7 +156,7 @@ Work steps and their text actions/descriptions
 
 | Column | Name | Alias | Type | Trust | Notes/Meaning |
 |---|---|---|---|---|---|
-| `workstep_link.workstep_linkno_i` |  |  | INT (int4) | documented | Unique identifier of the work step link. |
+| `workstep_link.workstep_linkno_i` | workstep_link_id | z_WORKSTEP_LINK_ID | INT (int4) | documented | Unique identifier of the work step link. |
 | `workstep_link.descno_i` |  |  | INT (int4) | documented | Foreign key referencing the descno_i of the wo_text_description table (Work Order Text Description). |
 | `workstep_link.sequenceno` | workstep_no | z_WORKSTEP_NO | INT (int4) | probed | Step's position in the sequence of steps within the Work Template. |
 | `wo_text_description.header` | wp_it_header | z_WP_IT_HEADER | ALPHANUM (varchar(70)) | probed | Header description of the work step. |

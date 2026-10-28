@@ -27,7 +27,7 @@ SELECT
     wp_header.station AS z_WP_STATION,
 
     -- 4. workstep_link (Step Sequence inside WO)
-    workstep_link.workstep_linkno_i,
+    workstep_link.workstep_linkno_i AS z_WORKSTEP_LINK_ID,
     workstep_link.descno_i,
     workstep_link.sequenceno AS z_WORKSTEP_NO,
 

@@ -1,1 +1,4 @@
 node_modules/
+archive/verification/*.csv
+/*.csv
+!/Database-Description-AMOS-csv.csv

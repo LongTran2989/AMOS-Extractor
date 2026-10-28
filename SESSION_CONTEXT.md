@@ -1,6 +1,6 @@
 # AMOS-Extractor — Session Context
 
-> **Last updated:** 2026-09-29  
+> **Last updated:** 2026-10-28  
 > **Purpose:** Preserve accumulated knowledge between sessions. Resume here without lost context.
 
 ---
@@ -26,7 +26,8 @@ The database is PostgreSQL-compatible. We query it using **PostgreSQL syntax** (
 | [extract_work_order.sql](file:///g:/AMOS-Extractor/extract_work_order.sql) | **Full Work Order Extraction Query** — complete 1:1 raw data query across all 9 schema tables. |
 | [extract_han_workpacks_today.sql](file:///g:/AMOS-Extractor/extract_han_workpacks_today.sql) | **HAN Station Workpacks Query** — extracts all active Workpacks at station HAN for today with status lookups. |
 | [extract_han_workpacks_date_range.sql](file:///g:/AMOS-Extractor/extract_han_workpacks_date_range.sql) | **Station Workpacks in Date Range** — sample: WPs at HAN overlapping 2026-09-22..2026-09-26, with status and responsible department. Uses approved `z_` aliases. |
-| [extract_wp_seqs_parameterized.sql](file:///g:/AMOS-Extractor/extract_wp_seqs_parameterized.sql) | **Parameterized WP Sequences Query** — extracts active/recent Workpacks at HAN/NTHN down to item, workstep, description, and required materials (part requests). |
+| [extract_wp_seqs_parameterized.sql](file:///g:/AMOS-Extractor/extract_wp_seqs_parameterized.sql) | **Parameterized WP Sequences Query** — extracts active/recent Workpacks at HAN/NTHN down to item, workstep, description, and required materials (part requests). One flat row per step x part; kept as the reference output. |
+| [extract_wp_seqs_steps.sql](file:///g:/AMOS-Extractor/extract_wp_seqs_steps.sql) + [extract_wp_seqs_parts.sql](file:///g:/AMOS-Extractor/extract_wp_seqs_parts.sql) | **Split WP Sequences (templates, HAN/NTHN)** — the same data in two result sets, rebuilt into the flat shape with `npm run stitch`. Per-pair copies are generated into `queries/wp_seqs/` by `npm run scaffold`. See [docs/wp-seqs-split-extraction.md](docs/wp-seqs-split-extraction.md). |
 | [extract_wp_timebookings.sql](file:///g:/AMOS-Extractor/extract_wp_timebookings.sql) | **Workpack Timebookings Query** — extracts active/recent Workpacks at HAN/NTHN down to item sequences, worksteps, action execution, and associated time bookings. |
 | [extract_wp_timebookings_history.sql](file:///g:/AMOS-Extractor/extract_wp_timebookings_history.sql) | **Workpack Timebookings & Modification History Query** — extracts active/recent Workpacks at HAN/NTHN down to worksteps, time bookings, and modification history audit records from `time_captured_history` (History Viewer). |
 | [extract_wp_timebookings_seq_4_7.sql](file:///g:/AMOS-Extractor/extract_wp_timebookings_seq_4_7.sql) | **Specific Sequence Timebookings Query** — extracts timebookings and modification history for sequence 4.7 of WP `A620-040326-BASE-MCC-STO`. |
@@ -146,6 +147,11 @@ ORDER BY tc.start_date, tc.start_time;
 - **Closed Workpack Dates (`act_end_date` is empty)**: When a Workpack is closed, AMOS does *not* populate `wp_header.act_end_date` or `wp_header.act_end_time`. It only populates `end_date`. Do not rely on `act_end_date` for filters.
 - **Database Timezone (UTC)**: The AMOS database `CURRENT_TIMESTAMP` operates in UTC time. If doing real-time comparisons against local time windows (e.g. +07:00), you must offset the database timestamp explicitly (e.g., `CURRENT_TIMESTAMP + INTERVAL '7' HOUR`) before comparing it against AMOS integer dates and times.
 - **`wp_history` 1:N Row Duplication Hazard**: The `wp_history` table is an append-only audit log. Joining `wp_history` to `wo_header` or `wp_sequence` creates a 1:N relationship that artificially multiplies row results for every historical event. Never use `wp_history` just to retrieve sequence titles—use `wo_event_link` instead.
+- **Split extraction + stitching (2026-10-28)**: the flat WP-sequences query multiplies steps by parts (~33k rows, wide `text_html` repeated). It is split into a steps query and a parts query keyed by `z_WORKSTEP_LINK_ID` (`workstep_link.workstep_linkno_i`, approved name), and `npm run stitch` rebuilds the flat output the consuming app expects. Verified identical on HAN-NTHN (33135 rows, 24 columns, ignoring export formatting). Full guide and lessons: [docs/wp-seqs-split-extraction.md](docs/wp-seqs-split-extraction.md).
+- **Station-department pairs** (`queries/wp_seqs/pairs.json`): HAN-NTHN, HAN-NGTHN, HAN-CNBDNT, DAD-CNDN, SGN-NTHCM, SGN-NGTHCM, SGN-CNBDNT. The root templates are HAN/NTHN; `npm run scaffold` generates the per-pair files. Never edit generated files.
+- **`wp_sequence` can list the same work order twice** in one WP, repeating its worksteps. Any child query that joins back through `wp_sequence` repeats its rows too; filter with `EXISTS` instead.
+- **Sargable AMOS date filters**: compare the integer date column against `CURRENT_DATE - DATE '1971-12-31'` instead of converting the column; use inner joins for tables the `WHERE` clause requires.
+- **AMOS CSV export quirks**: lowercase aliases, NULL as a single space, apostrophe thousands separators, varying decimals, unquoted fields with line breaks, and out-of-memory on very large results (export per-WP pieces). Details in the split-extraction doc.
 
 ---
 
