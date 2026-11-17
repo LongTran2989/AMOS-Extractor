@@ -13,8 +13,9 @@ Node >= 24 (TypeScript is run directly via `node src/cli.ts`, no build step).
 - `npm run validate` — lint every root `*.sql` and `queries/wp_seqs/*.sql` against `schema/` + the physical CSV (errors → exit 1)
 - `npm run docs` — regenerate `docs/generated/schema.md` (tables + Mermaid ERD) from `schema/`; `npm run docs:check` fails if it is stale
 - `npm run typecheck` — `tsc --noEmit`
-- `npm run check` — typecheck + test + validate + docs:check
-- `npm test` globs `test/**/*.test.ts`, but no `test/` directory exists yet. Single test: `node --test test/path/file.test.ts`.
+- `npm run check` — typecheck + test + validate + docs:check + dwh:check
+- `npm test` globs `test/**/*.test.ts` (converter tests live in `test/dwh/`). Single test: `node --test test/path/file.test.ts`.
+- `npm run dwh:convert` — converts every root `*.sql` and `queries/wp_seqs/*.sql` into Oracle SQL under `queries/dwh/` plus `queries/dwh/_manifest.json` (no database). `npm run dwh:check` fails if those files are stale or hand-edited. Order: scaffold → validate → dwh:convert.
 - `npm run scaffold` — renders `queries/wp_seqs/<DEPT>_{steps,parts}.sql` from the root `extract_wp_seqs_{steps,parts}.sql` templates and `queries/wp_seqs/pairs.json`. Edit the templates, never the generated files.
 - `npm run stitch -- steps.csv parts.csv out.csv` rebuilds the flat WP-sequences output from the split queries; `npm run stitch:compare -- legacy.csv [more.csv] stitched.csv` checks it. See [docs/wp-seqs-split-extraction.md](docs/wp-seqs-split-extraction.md).
 - `npm run docs:check` currently regenerates the docs instead of only checking (the script passes `--check`, the CLI expects the `docs:check` command).
@@ -46,6 +47,15 @@ The `extract_*.sql` files with `<INSERT_WPNO_HERE>` placeholders are substituted
 - Step text: always select `wo_text_description.header`, `.text`, `.text_html` together (`text` is NULL unless saved as plain text).
 - `wp_history` is an append-only log; joining it multiplies rows 1:N. Use `wo_event_link` for sequence titles.
 - Item numbering: `wp_sequence.seqno_prefix_i` . `wp_sequence.seqno` (e.g. 3.23), then `workstep_link.sequenceno` orders worksteps within the item.
+
+## DWH workflow
+
+- The DWH is an **Oracle** staging copy of AMOS (schema `STG_AMOS`) behind a SQL Server 2016 linked server `DWH_DB`. Queries go through it as pass-through Oracle SQL, never as four-part T-SQL. Credentials only in `.env`; never print, log or commit them.
+- Write and validate queries in PostgreSQL as usual, then `npm run dwh:convert`. Never hand-edit `queries/dwh/`; `npm run dwh:check` (part of `npm run check`) fails if it is stale.
+- The converter refuses sources with lint errors and anything it cannot translate exactly (catalogue: docs/dwh-converter-plan.md §A.5). Change the source or extend the converter with a test; never edit generated files.
+- Some AMOS tables are missing in the DWH; see `docs/generated/dwh-schema-diff.md`. Refresh with `npm run dwh:catalogue` then `npm run dwh:schema-diff`. (Phase 2, not built yet: until then the generated files say "availability unknown".)
+- Only `SELECT`/`WITH` ever runs, through `dwh:run` or the page. Never run writes on either database.
+- "Now"/"today" are UTC on both sides (`SYS_EXTRACT_UTC(SYSTIMESTAMP)`); never emit `SYSDATE` or Oracle `CURRENT_DATE`. Oracle treats `''` as NULL.
 
 ## Known repo quirk
 

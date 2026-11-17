@@ -13,6 +13,7 @@ if (command === "validate") {
   const csv = loadCsvIndex(csvPath);
 
   // Root queries plus the generated per-pair queries (queries/wp_seqs/).
+  // Never queries/dwh/: that folder holds generated Oracle SQL for the DWH, not PostgreSQL.
   const sqlIn = (dir: string) => readdirSync(path.join(process.cwd(), dir)).filter(f => f.endsWith(".sql") && f !== "AMOS-WO.sql").map(f => path.join(dir, f));
   const files = [...sqlIn("."), ...sqlIn(path.join("queries", "wp_seqs"))];
   let hasErrors = false;
@@ -69,6 +70,9 @@ if (command === "validate") {
   const { scaffoldWpSeqs } = await import("./scaffold/wpSeqs.ts");
   const written = scaffoldWpSeqs(process.cwd());
   console.log(`Wrote ${written.length} files to queries/wp_seqs/`);
+} else if (command?.startsWith("dwh:")) {
+  const { runDwh } = await import("./dwh/cli.ts");
+  process.exitCode = await runDwh(command, process.argv.slice(3), process.cwd());
 } else {
   console.log(`Unknown command: ${command}`);
 }
