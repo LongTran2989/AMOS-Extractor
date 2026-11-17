@@ -2,9 +2,9 @@
 -- Oracle SQL for the DWH (STG_AMOS), sent through the DWH_DB linked server by the DWH runner.
 -- Source: queries/wp_seqs/NGTHCM_parts.sql  sha256:7a24e8cef936
 -- Converter: 2   Catalogue snapshot: none
--- Available in the DWH: unknown (no catalogue snapshot yet)
+-- Available in the DWH: NO (missing tables listed in dwh/mapping.yaml: WP_DEPARTMENT_LINK, WP_STATUS; columns not checked yet)
 -- Warning W_UTC_TODAY: "today" and "now" mean UTC, the same as in AMOS.
--- Warning W_NO_CATALOGUE: No DWH catalogue snapshot yet: names are upper case and availability is unknown (refresh with npm run dwh:catalogue).
+-- Warning W_NO_CATALOGUE: No DWH catalogue snapshot yet: names are upper case, and availability uses only the missing tables listed in dwh/mapping.yaml (columns are not checked).
 
 SELECT
     WORKSTEP_LINK.WORKSTEP_LINKNO_I AS "z_WORKSTEP_LINK_ID",

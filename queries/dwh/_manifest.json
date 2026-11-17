@@ -19,7 +19,7 @@
         },
         {
           "code": "W_NO_CATALOGUE",
-          "plain": "No DWH catalogue snapshot yet: names are upper case and availability is unknown (refresh with npm run dwh:catalogue)."
+          "plain": "No DWH catalogue snapshot yet: names are upper case, and availability uses only the missing tables listed in dwh/mapping.yaml (columns are not checked)."
         }
       ],
       "placeholders": [],
@@ -267,8 +267,11 @@
       "sourceSha256": "02c0a40653ca50f872a68ed5ca9082584b70bc158bdb65d3e5d555a0ecb105df",
       "status": "converted",
       "output": "queries/dwh/extract_han_workpacks_date_range.sql",
-      "available": "unknown",
-      "missing": [],
+      "available": false,
+      "missing": [
+        "WP_DEPARTMENT_LINK",
+        "WP_STATUS"
+      ],
       "warnings": [
         {
           "code": "W_EMPTY_IS_NULL",
@@ -280,7 +283,7 @@
         },
         {
           "code": "W_NO_CATALOGUE",
-          "plain": "No DWH catalogue snapshot yet: names are upper case and availability is unknown (refresh with npm run dwh:catalogue)."
+          "plain": "No DWH catalogue snapshot yet: names are upper case, and availability uses only the missing tables listed in dwh/mapping.yaml (columns are not checked)."
         }
       ],
       "placeholders": [],
@@ -516,8 +519,10 @@
       "sourceSha256": "6c7482a3c3e157c71b7c569d3a5171ad31008d35636c1c35e2d92d393e13eeca",
       "status": "converted",
       "output": "queries/dwh/extract_han_workpacks_today.sql",
-      "available": "unknown",
-      "missing": [],
+      "available": false,
+      "missing": [
+        "WP_STATUS"
+      ],
       "warnings": [
         {
           "code": "W_UTC_TODAY",
@@ -525,7 +530,7 @@
         },
         {
           "code": "W_NO_CATALOGUE",
-          "plain": "No DWH catalogue snapshot yet: names are upper case and availability is unknown (refresh with npm run dwh:catalogue)."
+          "plain": "No DWH catalogue snapshot yet: names are upper case, and availability uses only the missing tables listed in dwh/mapping.yaml (columns are not checked)."
         }
       ],
       "placeholders": [],
@@ -755,8 +760,11 @@
       "sourceSha256": "55a3a8c55375b2bb61f97464a7781b373cb1f0c6d25d50c2e9e9c54fd59be227",
       "status": "converted",
       "output": "queries/dwh/extract_parts_standalone_no_cml_no_alternate.sql",
-      "available": "unknown",
-      "missing": [],
+      "available": false,
+      "missing": [
+        "CML_REFERENCE",
+        "OEM_DOC_PARTNO"
+      ],
       "warnings": [
         {
           "code": "W_STRING_ORDER",
@@ -764,7 +772,7 @@
         },
         {
           "code": "W_NO_CATALOGUE",
-          "plain": "No DWH catalogue snapshot yet: names are upper case and availability is unknown (refresh with npm run dwh:catalogue)."
+          "plain": "No DWH catalogue snapshot yet: names are upper case, and availability uses only the missing tables listed in dwh/mapping.yaml (columns are not checked)."
         }
       ],
       "placeholders": [],
@@ -1026,8 +1034,11 @@
       "sourceSha256": "4ff306702d36da1c938bb065021f8bc2410fb51633d8f06040af68b2d026273b",
       "status": "converted",
       "output": "queries/dwh/extract_wp_materials.sql",
-      "available": "unknown",
-      "missing": [],
+      "available": false,
+      "missing": [
+        "WP_DEPARTMENT_LINK",
+        "WP_STATUS"
+      ],
       "warnings": [
         {
           "code": "W_STRING_ORDER",
@@ -1035,7 +1046,7 @@
         },
         {
           "code": "W_NO_CATALOGUE",
-          "plain": "No DWH catalogue snapshot yet: names are upper case and availability is unknown (refresh with npm run dwh:catalogue)."
+          "plain": "No DWH catalogue snapshot yet: names are upper case, and availability uses only the missing tables listed in dwh/mapping.yaml (columns are not checked)."
         }
       ],
       "placeholders": [],
@@ -1097,8 +1108,11 @@
       "sourceSha256": "2284673911cb69cacb11228dc5aadb1f0585177ab4de7b46c6080541e9915de9",
       "status": "converted",
       "output": "queries/dwh/extract_wp_seqs_parameterized.sql",
-      "available": "unknown",
-      "missing": [],
+      "available": false,
+      "missing": [
+        "WP_DEPARTMENT_LINK",
+        "WP_STATUS"
+      ],
       "warnings": [
         {
           "code": "W_UTC_TODAY",
@@ -1110,7 +1124,7 @@
         },
         {
           "code": "W_NO_CATALOGUE",
-          "plain": "No DWH catalogue snapshot yet: names are upper case and availability is unknown (refresh with npm run dwh:catalogue)."
+          "plain": "No DWH catalogue snapshot yet: names are upper case, and availability uses only the missing tables listed in dwh/mapping.yaml (columns are not checked)."
         }
       ],
       "placeholders": [],
@@ -1266,8 +1280,11 @@
       "sourceSha256": "b5b9cd8fc427b4e9b304b3c287925b95ffac432834cfa75da0ae2d6b4f7bb254",
       "status": "converted",
       "output": "queries/dwh/extract_wp_seqs_parts.sql",
-      "available": "unknown",
-      "missing": [],
+      "available": false,
+      "missing": [
+        "WP_DEPARTMENT_LINK",
+        "WP_STATUS"
+      ],
       "warnings": [
         {
           "code": "W_UTC_TODAY",
@@ -1275,7 +1292,7 @@
         },
         {
           "code": "W_NO_CATALOGUE",
-          "plain": "No DWH catalogue snapshot yet: names are upper case and availability is unknown (refresh with npm run dwh:catalogue)."
+          "plain": "No DWH catalogue snapshot yet: names are upper case, and availability uses only the missing tables listed in dwh/mapping.yaml (columns are not checked)."
         }
       ],
       "placeholders": [],
@@ -1326,8 +1343,11 @@
       "sourceSha256": "e0e69103fef57f9e71dece0e11954a2792e801a39db610a02bbffa7f50ba575e",
       "status": "converted",
       "output": "queries/dwh/extract_wp_seqs_steps.sql",
-      "available": "unknown",
-      "missing": [],
+      "available": false,
+      "missing": [
+        "WP_DEPARTMENT_LINK",
+        "WP_STATUS"
+      ],
       "warnings": [
         {
           "code": "W_UTC_TODAY",
@@ -1339,7 +1359,7 @@
         },
         {
           "code": "W_NO_CATALOGUE",
-          "plain": "No DWH catalogue snapshot yet: names are upper case and availability is unknown (refresh with npm run dwh:catalogue)."
+          "plain": "No DWH catalogue snapshot yet: names are upper case, and availability uses only the missing tables listed in dwh/mapping.yaml (columns are not checked)."
         }
       ],
       "placeholders": [],
@@ -1484,8 +1504,11 @@
       "sourceSha256": "d44235708f9c4abd142bcb69d623be9038bef0f30de156b5565514e483e0e4ca",
       "status": "converted",
       "output": "queries/dwh/extract_wp_timebookings.sql",
-      "available": "unknown",
-      "missing": [],
+      "available": false,
+      "missing": [
+        "WP_DEPARTMENT_LINK",
+        "WP_STATUS"
+      ],
       "warnings": [
         {
           "code": "W_UTC_TODAY",
@@ -1497,7 +1520,7 @@
         },
         {
           "code": "W_NO_CATALOGUE",
-          "plain": "No DWH catalogue snapshot yet: names are upper case and availability is unknown (refresh with npm run dwh:catalogue)."
+          "plain": "No DWH catalogue snapshot yet: names are upper case, and availability uses only the missing tables listed in dwh/mapping.yaml (columns are not checked)."
         }
       ],
       "placeholders": [],
@@ -1725,8 +1748,12 @@
       "sourceSha256": "0b5aebd78ade8c8a530903536f1b196cde4b7c323a07be889608044aa9d3efbd",
       "status": "converted",
       "output": "queries/dwh/extract_wp_timebookings_history.sql",
-      "available": "unknown",
-      "missing": [],
+      "available": false,
+      "missing": [
+        "TIME_CAPTURED_HISTORY",
+        "WP_DEPARTMENT_LINK",
+        "WP_STATUS"
+      ],
       "warnings": [
         {
           "code": "W_UTC_TODAY",
@@ -1738,7 +1765,7 @@
         },
         {
           "code": "W_NO_CATALOGUE",
-          "plain": "No DWH catalogue snapshot yet: names are upper case and availability is unknown (refresh with npm run dwh:catalogue)."
+          "plain": "No DWH catalogue snapshot yet: names are upper case, and availability uses only the missing tables listed in dwh/mapping.yaml (columns are not checked)."
         }
       ],
       "placeholders": [],
@@ -2023,12 +2050,16 @@
       "sourceSha256": "2e8b50db94130c5b1f9510bfd201152dd795ba2536da17bb659cf2839a80eaaf",
       "status": "converted",
       "output": "queries/dwh/extract_wp_timebookings_seq_4_7.sql",
-      "available": "unknown",
-      "missing": [],
+      "available": false,
+      "missing": [
+        "TIME_CAPTURED_HISTORY",
+        "WP_DEPARTMENT_LINK",
+        "WP_STATUS"
+      ],
       "warnings": [
         {
           "code": "W_NO_CATALOGUE",
-          "plain": "No DWH catalogue snapshot yet: names are upper case and availability is unknown (refresh with npm run dwh:catalogue)."
+          "plain": "No DWH catalogue snapshot yet: names are upper case, and availability uses only the missing tables listed in dwh/mapping.yaml (columns are not checked)."
         }
       ],
       "placeholders": [],
@@ -2333,8 +2364,11 @@
       "sourceSha256": "cedf9e82a7429b86a527db669f336efdd01763f451b338a9374b1fe8e818e276",
       "status": "converted",
       "output": "queries/dwh/wp_seqs/BDNTH_parts.sql",
-      "available": "unknown",
-      "missing": [],
+      "available": false,
+      "missing": [
+        "WP_DEPARTMENT_LINK",
+        "WP_STATUS"
+      ],
       "warnings": [
         {
           "code": "W_UTC_TODAY",
@@ -2342,7 +2376,7 @@
         },
         {
           "code": "W_NO_CATALOGUE",
-          "plain": "No DWH catalogue snapshot yet: names are upper case and availability is unknown (refresh with npm run dwh:catalogue)."
+          "plain": "No DWH catalogue snapshot yet: names are upper case, and availability uses only the missing tables listed in dwh/mapping.yaml (columns are not checked)."
         }
       ],
       "placeholders": [],
@@ -2393,8 +2427,11 @@
       "sourceSha256": "07369a3907fa36f65d361ba050d7fe7089bf2bee177c3edf1b43713619920e8e",
       "status": "converted",
       "output": "queries/dwh/wp_seqs/BDNTH_steps.sql",
-      "available": "unknown",
-      "missing": [],
+      "available": false,
+      "missing": [
+        "WP_DEPARTMENT_LINK",
+        "WP_STATUS"
+      ],
       "warnings": [
         {
           "code": "W_UTC_TODAY",
@@ -2406,7 +2443,7 @@
         },
         {
           "code": "W_NO_CATALOGUE",
-          "plain": "No DWH catalogue snapshot yet: names are upper case and availability is unknown (refresh with npm run dwh:catalogue)."
+          "plain": "No DWH catalogue snapshot yet: names are upper case, and availability uses only the missing tables listed in dwh/mapping.yaml (columns are not checked)."
         }
       ],
       "placeholders": [],
@@ -2551,8 +2588,11 @@
       "sourceSha256": "41921fb30b4b02d9e2972c509b89a052d747e0203c4d428240577b99ec59d7a7",
       "status": "converted",
       "output": "queries/dwh/wp_seqs/CNKVMT_parts.sql",
-      "available": "unknown",
-      "missing": [],
+      "available": false,
+      "missing": [
+        "WP_DEPARTMENT_LINK",
+        "WP_STATUS"
+      ],
       "warnings": [
         {
           "code": "W_UTC_TODAY",
@@ -2560,7 +2600,7 @@
         },
         {
           "code": "W_NO_CATALOGUE",
-          "plain": "No DWH catalogue snapshot yet: names are upper case and availability is unknown (refresh with npm run dwh:catalogue)."
+          "plain": "No DWH catalogue snapshot yet: names are upper case, and availability uses only the missing tables listed in dwh/mapping.yaml (columns are not checked)."
         }
       ],
       "placeholders": [],
@@ -2611,8 +2651,11 @@
       "sourceSha256": "0b18caa2af29441fbc1e9f2b86d3dcbdbcc4348b597c949a9dc24edcc2511f98",
       "status": "converted",
       "output": "queries/dwh/wp_seqs/CNKVMT_steps.sql",
-      "available": "unknown",
-      "missing": [],
+      "available": false,
+      "missing": [
+        "WP_DEPARTMENT_LINK",
+        "WP_STATUS"
+      ],
       "warnings": [
         {
           "code": "W_UTC_TODAY",
@@ -2624,7 +2667,7 @@
         },
         {
           "code": "W_NO_CATALOGUE",
-          "plain": "No DWH catalogue snapshot yet: names are upper case and availability is unknown (refresh with npm run dwh:catalogue)."
+          "plain": "No DWH catalogue snapshot yet: names are upper case, and availability uses only the missing tables listed in dwh/mapping.yaml (columns are not checked)."
         }
       ],
       "placeholders": [],
@@ -2769,8 +2812,11 @@
       "sourceSha256": "7a24e8cef936bb5aef24a1fd529c93d198a0953b28138318ae94a71d82d87d0e",
       "status": "converted",
       "output": "queries/dwh/wp_seqs/NGTHCM_parts.sql",
-      "available": "unknown",
-      "missing": [],
+      "available": false,
+      "missing": [
+        "WP_DEPARTMENT_LINK",
+        "WP_STATUS"
+      ],
       "warnings": [
         {
           "code": "W_UTC_TODAY",
@@ -2778,7 +2824,7 @@
         },
         {
           "code": "W_NO_CATALOGUE",
-          "plain": "No DWH catalogue snapshot yet: names are upper case and availability is unknown (refresh with npm run dwh:catalogue)."
+          "plain": "No DWH catalogue snapshot yet: names are upper case, and availability uses only the missing tables listed in dwh/mapping.yaml (columns are not checked)."
         }
       ],
       "placeholders": [],
@@ -2829,8 +2875,11 @@
       "sourceSha256": "01f79778600cc1d7dd61f451d497c9a2d6a3a9c6bc57495670abfa4b45f690b1",
       "status": "converted",
       "output": "queries/dwh/wp_seqs/NGTHCM_steps.sql",
-      "available": "unknown",
-      "missing": [],
+      "available": false,
+      "missing": [
+        "WP_DEPARTMENT_LINK",
+        "WP_STATUS"
+      ],
       "warnings": [
         {
           "code": "W_UTC_TODAY",
@@ -2842,7 +2891,7 @@
         },
         {
           "code": "W_NO_CATALOGUE",
-          "plain": "No DWH catalogue snapshot yet: names are upper case and availability is unknown (refresh with npm run dwh:catalogue)."
+          "plain": "No DWH catalogue snapshot yet: names are upper case, and availability uses only the missing tables listed in dwh/mapping.yaml (columns are not checked)."
         }
       ],
       "placeholders": [],
@@ -2987,8 +3036,11 @@
       "sourceSha256": "437c8f1c554c771a7f70db158261f1a10c44a6b82992b40707dad52eca893182",
       "status": "converted",
       "output": "queries/dwh/wp_seqs/NGTHN_parts.sql",
-      "available": "unknown",
-      "missing": [],
+      "available": false,
+      "missing": [
+        "WP_DEPARTMENT_LINK",
+        "WP_STATUS"
+      ],
       "warnings": [
         {
           "code": "W_UTC_TODAY",
@@ -2996,7 +3048,7 @@
         },
         {
           "code": "W_NO_CATALOGUE",
-          "plain": "No DWH catalogue snapshot yet: names are upper case and availability is unknown (refresh with npm run dwh:catalogue)."
+          "plain": "No DWH catalogue snapshot yet: names are upper case, and availability uses only the missing tables listed in dwh/mapping.yaml (columns are not checked)."
         }
       ],
       "placeholders": [],
@@ -3047,8 +3099,11 @@
       "sourceSha256": "9a53a35798bb1d46ff6939fcc2331699fa7659b200f2f06d66ee8c472306ad62",
       "status": "converted",
       "output": "queries/dwh/wp_seqs/NGTHN_steps.sql",
-      "available": "unknown",
-      "missing": [],
+      "available": false,
+      "missing": [
+        "WP_DEPARTMENT_LINK",
+        "WP_STATUS"
+      ],
       "warnings": [
         {
           "code": "W_UTC_TODAY",
@@ -3060,7 +3115,7 @@
         },
         {
           "code": "W_NO_CATALOGUE",
-          "plain": "No DWH catalogue snapshot yet: names are upper case and availability is unknown (refresh with npm run dwh:catalogue)."
+          "plain": "No DWH catalogue snapshot yet: names are upper case, and availability uses only the missing tables listed in dwh/mapping.yaml (columns are not checked)."
         }
       ],
       "placeholders": [],
@@ -3205,8 +3260,11 @@
       "sourceSha256": "170626158a5be36e1af39646387e96fe4dfaffa89a41bfd47cb8cbe97a90241e",
       "status": "converted",
       "output": "queries/dwh/wp_seqs/NTHCM_parts.sql",
-      "available": "unknown",
-      "missing": [],
+      "available": false,
+      "missing": [
+        "WP_DEPARTMENT_LINK",
+        "WP_STATUS"
+      ],
       "warnings": [
         {
           "code": "W_UTC_TODAY",
@@ -3214,7 +3272,7 @@
         },
         {
           "code": "W_NO_CATALOGUE",
-          "plain": "No DWH catalogue snapshot yet: names are upper case and availability is unknown (refresh with npm run dwh:catalogue)."
+          "plain": "No DWH catalogue snapshot yet: names are upper case, and availability uses only the missing tables listed in dwh/mapping.yaml (columns are not checked)."
         }
       ],
       "placeholders": [],
@@ -3265,8 +3323,11 @@
       "sourceSha256": "6f79addcb1c4233c9d6288696bf016cfe836b59bc530fe7792f82665a25d4f73",
       "status": "converted",
       "output": "queries/dwh/wp_seqs/NTHCM_steps.sql",
-      "available": "unknown",
-      "missing": [],
+      "available": false,
+      "missing": [
+        "WP_DEPARTMENT_LINK",
+        "WP_STATUS"
+      ],
       "warnings": [
         {
           "code": "W_UTC_TODAY",
@@ -3278,7 +3339,7 @@
         },
         {
           "code": "W_NO_CATALOGUE",
-          "plain": "No DWH catalogue snapshot yet: names are upper case and availability is unknown (refresh with npm run dwh:catalogue)."
+          "plain": "No DWH catalogue snapshot yet: names are upper case, and availability uses only the missing tables listed in dwh/mapping.yaml (columns are not checked)."
         }
       ],
       "placeholders": [],
@@ -3423,8 +3484,11 @@
       "sourceSha256": "ae3821639a75b4c5d01ed696779e2200b80a7352c76de640595074d2d5708543",
       "status": "converted",
       "output": "queries/dwh/wp_seqs/NTHN_parts.sql",
-      "available": "unknown",
-      "missing": [],
+      "available": false,
+      "missing": [
+        "WP_DEPARTMENT_LINK",
+        "WP_STATUS"
+      ],
       "warnings": [
         {
           "code": "W_UTC_TODAY",
@@ -3432,7 +3496,7 @@
         },
         {
           "code": "W_NO_CATALOGUE",
-          "plain": "No DWH catalogue snapshot yet: names are upper case and availability is unknown (refresh with npm run dwh:catalogue)."
+          "plain": "No DWH catalogue snapshot yet: names are upper case, and availability uses only the missing tables listed in dwh/mapping.yaml (columns are not checked)."
         }
       ],
       "placeholders": [],
@@ -3483,8 +3547,11 @@
       "sourceSha256": "61cab17126554c45749db06e916937725e554a3e0e249fd40f28fe0add65e693",
       "status": "converted",
       "output": "queries/dwh/wp_seqs/NTHN_steps.sql",
-      "available": "unknown",
-      "missing": [],
+      "available": false,
+      "missing": [
+        "WP_DEPARTMENT_LINK",
+        "WP_STATUS"
+      ],
       "warnings": [
         {
           "code": "W_UTC_TODAY",
@@ -3496,7 +3563,7 @@
         },
         {
           "code": "W_NO_CATALOGUE",
-          "plain": "No DWH catalogue snapshot yet: names are upper case and availability is unknown (refresh with npm run dwh:catalogue)."
+          "plain": "No DWH catalogue snapshot yet: names are upper case, and availability uses only the missing tables listed in dwh/mapping.yaml (columns are not checked)."
         }
       ],
       "placeholders": [],

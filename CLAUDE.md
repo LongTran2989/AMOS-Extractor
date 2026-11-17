@@ -53,7 +53,7 @@ The `extract_*.sql` files with `<INSERT_WPNO_HERE>` placeholders are substituted
 - The DWH is an **Oracle** staging copy of AMOS (schema `STG_AMOS`) behind a SQL Server 2016 linked server `DWH_DB`. Queries go through it as pass-through Oracle SQL, never as four-part T-SQL. Credentials only in `.env`; never print, log or commit them.
 - Write and validate queries in PostgreSQL as usual, then `npm run dwh:convert`. Never hand-edit `queries/dwh/`; `npm run dwh:check` (part of `npm run check`) fails if it is stale.
 - The converter refuses sources with lint errors and anything it cannot translate exactly (catalogue: docs/dwh-converter-plan.md §A.5). Change the source or extend the converter with a test; never edit generated files.
-- Some AMOS tables are missing in the DWH; see `docs/generated/dwh-schema-diff.md`. Refresh with `npm run dwh:catalogue` then `npm run dwh:schema-diff`. (Phase 2, not built yet: until then the generated files say "availability unknown".)
+- Some AMOS tables are missing in the DWH; see `docs/generated/dwh-schema-diff.md`. Refresh with `npm run dwh:catalogue` then `npm run dwh:schema-diff`. (Phase 2, not built yet: until then availability comes from `dwh_facts.amos_tables_missing_in_dwh` in `dwh/mapping.yaml`, tables only.)
 - Only `SELECT`/`WITH` ever runs, through `dwh:run` or the page. Never run writes on either database.
 - "Now"/"today" are UTC on both sides (`SYS_EXTRACT_UTC(SYSTIMESTAMP)`); never emit `SYSDATE` or Oracle `CURRENT_DATE`. Oracle treats `''` as NULL.
 

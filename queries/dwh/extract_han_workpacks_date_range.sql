@@ -2,10 +2,10 @@
 -- Oracle SQL for the DWH (STG_AMOS), sent through the DWH_DB linked server by the DWH runner.
 -- Source: extract_han_workpacks_date_range.sql  sha256:02c0a40653ca
 -- Converter: 2   Catalogue snapshot: none
--- Available in the DWH: unknown (no catalogue snapshot yet)
+-- Available in the DWH: NO (missing tables listed in dwh/mapping.yaml: WP_DEPARTMENT_LINK, WP_STATUS; columns not checked yet)
 -- Warning W_EMPTY_IS_NULL: Text that is empty ('') in AMOS is NULL in the DWH, so IS NULL, <>, NOT IN, NOT LIKE, text ranges and COALESCE/NULLIF on text can match different rows.
 -- Warning W_STRING_ORDER: Text sorts, and text comparisons with <, >, BETWEEN, may differ slightly from AMOS (the DWH orders text by character code).
--- Warning W_NO_CATALOGUE: No DWH catalogue snapshot yet: names are upper case and availability is unknown (refresh with npm run dwh:catalogue).
+-- Warning W_NO_CATALOGUE: No DWH catalogue snapshot yet: names are upper case, and availability uses only the missing tables listed in dwh/mapping.yaml (columns are not checked).
 
 SELECT
     WP_HEADER.WPNO_I AS "z_WP_ID",

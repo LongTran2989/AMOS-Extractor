@@ -118,8 +118,10 @@ test("result fields: placeholders, warnings, used columns, availability", () => 
   assert.ok(r.pretty.includes("'<INSERT_WPNO_HERE>'"));
   assert.ok(r.exec.includes("'<INSERT_WPNO_HERE>'"));
   assert.ok(!r.exec.includes("__PH_"));
-  assert.equal(r.available, "unknown");
+  assert.equal(r.available, false);
+  assert.deepEqual(r.missing, ["TASKCARD_COVERSHEET_INFO", "WP_STATUS"]);
   assert.ok(r.warnings.some((w) => w.code === "W_NO_CATALOGUE"));
+  assert.equal(convertQuery(readSource("extract_all_parts.sql"), "extract_all_parts.sql", opts).available, "unknown");
   assert.ok(r.usedColumns.includes("wp_header.wpno"));
   const withCat = convertQuery(readSource("extract_wp_seqs_steps.sql"), "extract_wp_seqs_steps.sql", { ...opts, catalogue: fixture });
   assert.equal(withCat.available, false);

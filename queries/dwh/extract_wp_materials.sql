@@ -2,9 +2,9 @@
 -- Oracle SQL for the DWH (STG_AMOS), sent through the DWH_DB linked server by the DWH runner.
 -- Source: extract_wp_materials.sql  sha256:4ff306702d36
 -- Converter: 2   Catalogue snapshot: none
--- Available in the DWH: unknown (no catalogue snapshot yet)
+-- Available in the DWH: NO (missing tables listed in dwh/mapping.yaml: WP_DEPARTMENT_LINK, WP_STATUS; columns not checked yet)
 -- Warning W_STRING_ORDER: Text sorts, and text comparisons with <, >, BETWEEN, may differ slightly from AMOS (the DWH orders text by character code).
--- Warning W_NO_CATALOGUE: No DWH catalogue snapshot yet: names are upper case and availability is unknown (refresh with npm run dwh:catalogue).
+-- Warning W_NO_CATALOGUE: No DWH catalogue snapshot yet: names are upper case, and availability uses only the missing tables listed in dwh/mapping.yaml (columns are not checked).
 
 SELECT
     WP_SEQUENCE.SEQNO_PREFIX_I AS "z_WP_SEQ_1ST",

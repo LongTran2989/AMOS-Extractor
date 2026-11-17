@@ -14,12 +14,22 @@ export interface DwhMapping {
   columns: Record<string, { dwh: string; keepOutputName?: boolean }>;
   amosCollation: "C" | "other" | "unknown";
   exportRowLimit: number;
+  /** AMOS tables known to be absent from the DWH (dwh_facts.amos_tables_missing_in_dwh, lower case). */
+  knownMissingTables: string[];
 }
 
 function need<T>(raw: Record<string, unknown>, key: string, check: (v: unknown) => boolean, what: string): T {
   const v = raw[key];
   if (!check(v)) throw new Error(`dwh/mapping.yaml: '${key}' must be ${what} (got ${JSON.stringify(v)})`);
   return v as T;
+}
+
+function knownMissing(raw: Record<string, unknown>): string[] {
+  const list = (raw.dwh_facts as Record<string, unknown> | undefined)?.amos_tables_missing_in_dwh ?? [];
+  if (!Array.isArray(list) || !list.every((t) => typeof t === "string" && /^[a-z0-9_]+$/.test(t))) {
+    throw new Error("dwh/mapping.yaml: dwh_facts.amos_tables_missing_in_dwh must be a list of lower-case AMOS table names");
+  }
+  return list as string[];
 }
 
 export function parseMapping(text: string): DwhMapping {
@@ -44,6 +54,7 @@ export function parseMapping(text: string): DwhMapping {
     columns,
     amosCollation: need(raw, "amos_collation", (v) => v === "C" || v === "other" || v === "unknown", "C, other or unknown"),
     exportRowLimit: need(raw, "export_row_limit", (v) => Number.isInteger(v) && (v as number) > 0, "a positive whole number"),
+    knownMissingTables: knownMissing(raw),
   };
 }
 

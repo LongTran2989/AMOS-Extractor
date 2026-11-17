@@ -123,7 +123,7 @@ export function convertQuery(source: string, filename: string, opts: ConvertOpti
   if (!opts.catalogue) {
     addWarning(warnings, {
       code: "W_NO_CATALOGUE",
-      plain: "No DWH catalogue snapshot yet: names are upper case and availability is unknown (refresh with npm run dwh:catalogue).",
+      plain: "No DWH catalogue snapshot yet: names are upper case, and availability uses only the missing tables listed in dwh/mapping.yaml (columns are not checked).",
     });
   }
 

@@ -378,7 +378,12 @@ export function availability(
   cat?: Catalogue,
   mapping?: DwhMapping,
 ): { available: boolean | "unknown"; missing: string[] } {
-  if (!cat) return { available: "unknown", missing: [] };
+  if (!cat) {
+    // No snapshot yet: fall back to the missing tables recorded from Phase 0 in dwh/mapping.yaml.
+    const known = new Set(mapping?.knownMissingTables ?? []);
+    const missing = scope.usedTables().filter((t) => known.has(t)).map((t) => t.toUpperCase()).sort();
+    return missing.length ? { available: false, missing } : { available: "unknown", missing: [] };
+  }
   const idx = catIndex(cat);
   const missing = new Set<string>();
   for (const t of scope.usedTables()) if (!idx.has(t.toUpperCase())) missing.add(t.toUpperCase());

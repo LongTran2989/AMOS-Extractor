@@ -35,9 +35,12 @@ export function outputPathOf(source: string): string {
   return `${OUT_DIR}/${source.replace(/^queries\//, "")}`;
 }
 
-function availabilityLine(r: ConvertResult): string {
-  if (r.available === "unknown") return "-- Available in the DWH: unknown (no catalogue snapshot yet)";
-  return r.available ? "-- Available in the DWH: yes" : `-- Available in the DWH: NO (missing: ${r.missing.join(", ")})`;
+function availabilityLine(r: ConvertResult, hasCatalogue: boolean): string {
+  if (r.available === "unknown") return "-- Available in the DWH: unknown (no missing tables known; columns are checked once a catalogue snapshot exists)";
+  if (r.available) return "-- Available in the DWH: yes";
+  return hasCatalogue
+    ? `-- Available in the DWH: NO (missing: ${r.missing.join(", ")})`
+    : `-- Available in the DWH: NO (missing tables listed in dwh/mapping.yaml: ${r.missing.join(", ")}; columns not checked yet)`;
 }
 
 function fileText(source: string, sourceSha: string, catalogueSha: string | undefined, mappingLinked: string, schema: string, r: ConvertResult): string {
@@ -46,7 +49,7 @@ function fileText(source: string, sourceSha: string, catalogueSha: string | unde
     `-- Oracle SQL for the DWH (${schema}), sent through the ${mappingLinked} linked server by the DWH runner.`,
     `-- Source: ${source}  sha256:${sourceSha.slice(0, 12)}`,
     `-- Converter: ${CONVERTER_VERSION}   Catalogue snapshot: ${catalogueSha ? `sha256:${catalogueSha.slice(0, 12)}` : "none"}`,
-    availabilityLine(r),
+    availabilityLine(r, catalogueSha !== undefined),
     ...r.placeholders.map((p) => `-- Placeholder: <${p.name}> (filled in when the query runs)`),
     ...r.warnings.map((w) => `-- Warning ${w.code}: ${w.plain}`),
   ];

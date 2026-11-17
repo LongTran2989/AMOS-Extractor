@@ -2,8 +2,8 @@
 -- Oracle SQL for the DWH (STG_AMOS), sent through the DWH_DB linked server by the DWH runner.
 -- Source: extract_wp_timebookings_seq_4_7.sql  sha256:2e8b50db9413
 -- Converter: 2   Catalogue snapshot: none
--- Available in the DWH: unknown (no catalogue snapshot yet)
--- Warning W_NO_CATALOGUE: No DWH catalogue snapshot yet: names are upper case and availability is unknown (refresh with npm run dwh:catalogue).
+-- Available in the DWH: NO (missing tables listed in dwh/mapping.yaml: TIME_CAPTURED_HISTORY, WP_DEPARTMENT_LINK, WP_STATUS; columns not checked yet)
+-- Warning W_NO_CATALOGUE: No DWH catalogue snapshot yet: names are upper case, and availability uses only the missing tables listed in dwh/mapping.yaml (columns are not checked).
 
 SELECT
     WP_HEADER.WPNO_I AS "z_WP_ID",

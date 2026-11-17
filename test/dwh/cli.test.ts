@@ -56,8 +56,11 @@ test("manifest marks extract_wp_seqs_steps as converted but not available, missi
   assert.equal(e.available, false);
   assert.deepEqual(e.missing, ["WP_DEPARTMENT_LINK", "WP_STATUS"]);
   assert.equal(entry(m, "extract_all_parts.sql").available, true);
-  // Without a snapshot, availability is unknown.
-  assert.equal(entry(manifestOf(generateAll(ROOT)), "extract_wp_seqs_steps.sql").available, "unknown");
+  // Without a snapshot, the missing tables recorded in dwh/mapping.yaml are used; columns stay unchecked.
+  const noCat = manifestOf(generateAll(ROOT));
+  assert.equal(entry(noCat, "extract_wp_seqs_steps.sql").available, false);
+  assert.deepEqual(entry(noCat, "extract_wp_seqs_steps.sql").missing, ["WP_DEPARTMENT_LINK", "WP_STATUS"]);
+  assert.equal(entry(noCat, "extract_all_parts.sql").available, "unknown");
 });
 
 test("header has source hash, availability and warning codes, and no date", () => {
@@ -73,9 +76,11 @@ test("header has source hash, availability and warning codes, and no date", () =
   for (const l of header) assert.ok(!/\d{4}-\d{2}-\d{2}|\d{2}:\d{2}/.test(l), `date in header: ${l}`);
   assert.ok(!text.includes("\r"));
   assert.ok(text.endsWith("\n"));
-  const unknown = generateAll(ROOT).get("queries/dwh/extract_wp_seqs_steps.sql")!;
-  assert.ok(unknown.includes("-- Available in the DWH: unknown (no catalogue snapshot yet)"));
-  assert.ok(unknown.includes("-- Converter: 2   Catalogue snapshot: none"));
+  const noCat = generateAll(ROOT);
+  const steps = noCat.get("queries/dwh/extract_wp_seqs_steps.sql")!;
+  assert.ok(steps.includes("-- Available in the DWH: NO (missing tables listed in dwh/mapping.yaml: WP_DEPARTMENT_LINK, WP_STATUS; columns not checked yet)"));
+  assert.ok(steps.includes("-- Converter: 2   Catalogue snapshot: none"));
+  assert.ok(noCat.get("queries/dwh/extract_all_parts.sql")!.includes("-- Available in the DWH: unknown (no missing tables known; columns are checked once a catalogue snapshot exists)"));
 });
 
 test("dwhConvert writes and removes files; dwhCheck reports hand edits, missing files and deleted sources", () => {

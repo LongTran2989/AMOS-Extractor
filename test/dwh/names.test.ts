@@ -93,6 +93,17 @@ test("#6 tables and columns missing from the DWH are listed, conversion is unaff
   assert.deepEqual(availability(scope("SELECT wp_header.wpno FROM wp_header"), fixture), { available: true, missing: [] });
 });
 
+test("mapping.yaml lists the six AMOS tables missing in the DWH", () => {
+  assert.deepEqual(mapping.knownMissingTables, ["wp_status", "wp_department_link", "cml_reference", "oem_doc_partno", "taskcard_coversheet_info", "time_captured_history"]);
+});
+
+test("without a catalogue, availability uses the missing tables recorded in mapping.yaml", () => {
+  const steps = scope(readSource("extract_wp_seqs_steps.sql"));
+  assert.deepEqual(availability(steps, undefined, mapping), { available: false, missing: ["WP_DEPARTMENT_LINK", "WP_STATUS"] });
+  // No known missing table: columns are not checked yet, so it stays unknown.
+  assert.deepEqual(availability(scope("SELECT wp_header.wpno FROM wp_header"), undefined, mapping), { available: "unknown", missing: [] });
+});
+
 test("availability lists WP_STATUS and WP_DEPARTMENT_LINK for extract_wp_seqs_steps.sql", () => {
   const s = scope(readSource("extract_wp_seqs_steps.sql"));
   assert.deepEqual(availability(s, fixture), { available: false, missing: ["WP_DEPARTMENT_LINK", "WP_STATUS"] });
