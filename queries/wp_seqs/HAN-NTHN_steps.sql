@@ -4,6 +4,8 @@
 -- Re-join with extract_wp_seqs_parts.sql on z_WORKSTEP_LINK_ID via `npm run stitch` to rebuild
 -- the flat output of extract_wp_seqs_parameterized.sql.
 -- z_WORKSTEP_LINK_ID is the last column; the stitcher removes it from the rebuilt output.
+-- Items come from wp_assignment (every WO assigned to the WP); wp_sequence is a LEFT JOIN because
+-- unsequenced items have no row there (their z_WP_SEQ_* columns are NULL).
 -- ORDER BY is kept on purpose so the stitched row order matches the legacy query.
 
 SELECT 
@@ -43,10 +45,13 @@ JOIN wp_status
        ON wp_status.wp_status_id = wp_header.wp_status
 JOIN wp_department_link
        ON wp_department_link.wpno_i = wp_header.wpno_i
+LEFT JOIN wp_assignment
+       ON wp_assignment.wpno_i = wp_header.wpno_i
 LEFT JOIN wp_sequence 
-       ON wp_sequence.wpno_i = wp_header.wpno_i
+       ON wp_sequence.wpno_i = wp_assignment.wpno_i
+      AND wp_sequence.event_perfno_i = wp_assignment.event_perfno_i
 LEFT JOIN wo_header 
-       ON wo_header.event_perfno_i = wp_sequence.event_perfno_i
+       ON wo_header.event_perfno_i = wp_assignment.event_perfno_i
 LEFT JOIN wo_event_link
        ON wo_event_link.event_perfno_i = wo_header.event_perfno_i
 LEFT JOIN workstep_link

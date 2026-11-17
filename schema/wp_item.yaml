@@ -1,7 +1,15 @@
 entity: wp_item
-description: Workpack sequence item connecting WP to WO
+description: Workpack item (a WO assigned to a WP). Membership comes from wp_assignment; wp_sequence only adds the item numbering and may be missing.
 root: wp_sequence
 tables:
+  wp_assignment:
+    role: link
+    meaning: "Authoritative list of WOs assigned to a WP. Probed on WP 'A898-210926 LINE-MCC': returns items that have NO wp_sequence row (wp_sequence returned zero rows for that WP). Extractions must start from here and LEFT JOIN wp_sequence."
+    primary_key: [wp_assignmentno_i]
+    joins:
+      - { from: wp_header.wpno_i, to: wp_assignment.wpno_i, type: left, cardinality: "1:N", trust: probed }
+      - { from: wp_assignment.event_perfno_i, to: wo_header.event_perfno_i, type: left, cardinality: "N:1", trust: probed }
+      - { from: wp_assignment.wpno_i, to: wp_sequence.wpno_i, type: left, cardinality: "1:1", trust: probed, note: "Composite join: ALSO require wp_sequence.event_perfno_i = wp_assignment.event_perfno_i. wp_sequence may have no row (unsequenced item); wp_sequence.status 9 = WO deassigned" }
   wp_sequence:
     role: root
     primary_key: [wp_sequence_id]

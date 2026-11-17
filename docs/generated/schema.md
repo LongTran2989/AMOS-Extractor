@@ -21,6 +21,9 @@ erDiagram
   workstep_link }o--|| wo_header : "workstep_link.event_perfno_i -> wo_header.event_perfno_i"
   workstep_link ||--|| wo_text_description : "workstep_link.descno_i -> wo_text_description.descno_i"
   wo_text_action }o--|| workstep_link : "wo_text_action.workstep_linkno_i -> workstep_link.workstep_linkno_i"
+  wp_header ||--o{ wp_assignment : "wp_header.wpno_i -> wp_assignment.wpno_i"
+  wp_assignment }o--|| wo_header : "wp_assignment.event_perfno_i -> wo_header.event_perfno_i"
+  wp_assignment ||--|| wp_sequence : "wp_assignment.wpno_i -> wp_sequence.wpno_i"
   wp_sequence }o--|| wp_header : "wp_sequence.wpno_i -> wp_header.wpno_i"
   wp_sequence ||--|| wo_header : "wp_sequence.event_perfno_i -> wo_header.event_perfno_i"
 ```
@@ -173,7 +176,7 @@ Work steps and their text actions/descriptions
 
 ## wp_item
 
-Workpack sequence item connecting WP to WO
+Workpack item (a WO assigned to a WP). Membership comes from wp_assignment; wp_sequence only adds the item numbering and may be missing.
 
 | Column | Name | Alias | Type | Trust | Notes/Meaning |
 |---|---|---|---|---|---|
