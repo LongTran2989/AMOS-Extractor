@@ -274,7 +274,7 @@ interface BranchOut {
   outputs: { name: string; type: SqlType }[];
 }
 
-function selectIr(b: PgNode, scope: ScopeInfo, ctx: RewriteCtx): BranchOut {
+function selectIr(b: PgNode, scope: ScopeInfo, ctx: RewriteCtx, top: boolean): BranchOut {
   const outputs: { name: string; type: SqlType }[] = [];
   const columns: IrColumn[] = (b.columns ?? []).map((c: PgNode): IrColumn => {
     const e = c.expr;
@@ -299,7 +299,7 @@ function selectIr(b: PgNode, scope: ScopeInfo, ctx: RewriteCtx): BranchOut {
       ir = rewriteExpr(e, scope, ctx);
       if (!name && ir.k === "col") name = unquote(ir.name);
     }
-    if (!name) addWarning(ctx.warnings, { code: "W_UNNAMED_COLUMN", plain: "A result column has no name; the DWH names it after its formula." });
+    if (!name && top) addWarning(ctx.warnings, { code: "W_UNNAMED_COLUMN", plain: "A result column has no name; the DWH names it after its formula." });
     outputs.push({ name, type: inferType(e, scope) });
     return as ? { e: ir, as: quoteAlias(as) } : { e: ir };
   });
@@ -332,7 +332,7 @@ function queryIr(node: PgNode, scope: ScopeInfo, ctx: RewriteCtx, top: boolean):
   const chain: PgNode[] = [];
   for (let b: PgNode = node; b; b = b._next) chain.push(b);
   const ops = chain.slice(0, -1).map((b) => SET_OP_NAMES[String(b.set_op).toLowerCase()]!);
-  const outs = chain.map((b) => selectIr(b, scope, ctx));
+  const outs = chain.map((b, i) => selectIr(b, scope, ctx, top && i === 0));
   const first = outs[0]!;
   const last = chain[chain.length - 1]!;
   const compound = chain.length > 1;

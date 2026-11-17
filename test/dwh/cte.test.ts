@@ -88,6 +88,11 @@ test("#12 a select expression without alias warns W_UNNAMED_COLUMN", () => {
   assert.deepEqual(r.q.branches[0]!.columns, [{ e: bin("+", col("WP_HEADER", "START_DATE"), num(1)) }]);
 });
 
+test("#12 W_UNNAMED_COLUMN is only for result columns, not for SELECT 1 inside EXISTS", () => {
+  const r = irOf("SELECT wp_header.wpno FROM wp_header WHERE EXISTS (SELECT 1 FROM wp_sequence WHERE wp_sequence.wpno_i = wp_header.wpno_i)");
+  assert.deepEqual(r.codes, []);
+});
+
 test("#13 SELECT * keeps the star with W_SELECT_STAR", () => {
   const r = irOf("SELECT * FROM wp_header");
   assert.deepEqual(r.q.branches[0]!.columns, [{ e: { k: "star" } }]);
