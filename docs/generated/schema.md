@@ -114,7 +114,7 @@ A maintenance workpack (WP) planned at a station, with its status and responsibl
 | `wp_header.wp_type` | wp_type | (proposed) | INT_0 (int4) | documented | Type of the Work Package: 0 = PLANNING Work Package 1 = CRM Work Package Enum: 0=PLANNING Work Package, 1=CRM Work Package |
 | `wp_header.hidden` | wp_maint_class | (proposed) | ALPHANUM (varchar(1)) | documented | Defines the visibility of the Workpackage. Possible values are: H: Heavy-Maintenance L: Line-Maintenance I: Hidden Empty or any other value: Unclassified Enum: H=Heavy-Maintenance, L=Line-Maintenance, I=Hidden |
 | `wp_header.responsible` | wp_responsible | (proposed) | SG (varchar(8)) | documented | Sign (user code) of the responsible person. |
-| `wp_header.wp_status` | wp_status_id | (proposed) | INT (int4) | documented | Current (present-day) status of the WP. Do NOT use to filter historical activity; use start/end dates. |
+| `wp_header.wp_status` | wp_status_id | z_WP_STATUS_ID | INT (int4) | documented | Current (present-day) status of the WP. Do NOT use to filter historical activity; use start/end dates. Approved 2026-11-17 (needed to filter by status in the DWH, which has no wp_status table). |
 | `wp_status.name` | wp_status_name | z_WP_STATUS_NAME | ALPHANUM (varchar(50)) | documented | Name of the Workpackage status |
 | `wp_status.closed` | wp_status_closed | (proposed) | BOOL (varchar(1)) | documented | Indicates whether the status is considered closed ("Y" for yes, "N" for no) |
 | `wp_status.resource_allocation_done` | wp_status_res_alloc_done | (proposed) | BOOL (varchar(1)) | documented | Indicates whether resource allocation is done for this status ("Y" for yes, "N" for no) |

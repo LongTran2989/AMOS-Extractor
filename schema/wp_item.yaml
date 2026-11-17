@@ -37,3 +37,6 @@ fields:
   - column: wp_sequence.seqno2
     name_status: unnamed
     trust: documented
+
+notes:
+  - "Approved computed name (2026-11-17): z_WP_ITEM_COUNT = COUNT(wp_assignment.wp_assignmentno_i) per workpack, i.e. every WO assigned to the WP (numbered or not). Used by extract_wp_item_counts.sql."

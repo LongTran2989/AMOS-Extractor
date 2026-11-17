@@ -95,10 +95,10 @@ fields:
 
   # ---------------- Status ----------------
   - column: wp_header.wp_status
-    name_status: proposed
-    proposed_name: wp_status_id
+    name_status: approved
+    name: wp_status_id
     trust: documented
-    meaning: Current (present-day) status of the WP. Do NOT use to filter historical activity; use start/end dates.
+    meaning: Current (present-day) status of the WP. Do NOT use to filter historical activity; use start/end dates. Approved 2026-11-17 (needed to filter by status in the DWH, which has no wp_status table).
     enum:
       source: lookup
       lookup: wp_status.name

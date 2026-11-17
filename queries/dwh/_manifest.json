@@ -287,7 +287,7 @@
     },
     {
       "source": "extract_han_workpacks_date_range.sql",
-      "sourceSha256": "02c0a40653ca50f872a68ed5ca9082584b70bc158bdb65d3e5d555a0ecb105df",
+      "sourceSha256": "03c98ec34451af28a09a42e7dcdf3b99501971a3c17f0fad8d8283e445fa5c22",
       "status": "converted",
       "output": "queries/dwh/extract_han_workpacks_date_range.sql",
       "available": false,
@@ -352,7 +352,7 @@
           "type": "text"
         },
         {
-          "name": "WP_STATUS",
+          "name": "z_WP_STATUS_ID",
           "type": "int"
         },
         {
@@ -531,11 +531,11 @@
         "wp_status.resource_allocation_done",
         "wp_status.wp_status_id"
       ],
-      "execLength": 1646
+      "execLength": 1666
     },
     {
       "source": "extract_han_workpacks_today.sql",
-      "sourceSha256": "6c7482a3c3e157c71b7c569d3a5171ad31008d35636c1c35e2d92d393e13eeca",
+      "sourceSha256": "add67f9b0ad5b940c376e3933bbe0d9a5ab660e09c22474bc9c7823c8472bcd4",
       "status": "converted",
       "output": "queries/dwh/extract_han_workpacks_today.sql",
       "available": false,
@@ -591,7 +591,7 @@
           "type": "text"
         },
         {
-          "name": "WP_STATUS",
+          "name": "z_WP_STATUS_ID",
           "type": "int"
         },
         {
@@ -768,7 +768,7 @@
         "wp_status.resource_allocation_done",
         "wp_status.wp_status_id"
       ],
-      "execLength": 1560
+      "execLength": 1580
     },
     {
       "source": "extract_parts_standalone_no_cml_no_alternate.sql",
@@ -1059,7 +1059,7 @@
     },
     {
       "source": "extract_work_order.sql",
-      "sourceSha256": "12d651794a2eb2d00373c9dd031bc1a29b3558e2a8766a29a438b4a45b15e2f2",
+      "sourceSha256": "b530f73887a7f43d30925f2c6478d8eaea0ae6114f4e0c4991b235e0e76cbf23",
       "status": "refused",
       "code": "E_DUPLICATE_OUTPUT",
       "plain": "Two result columns are both called TEXT. The DWH link (OPENQUERY) refuses that; add approved z_ aliases, or ask for RPC Out to be enabled.",
