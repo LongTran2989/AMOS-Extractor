@@ -7,6 +7,8 @@ export interface Script {
   columns: string[];
   rows: unknown[][];
   fail?: Error;
+  /** Send the columns and rows first, then fail (a connection lost mid-download). */
+  failAfterRows?: boolean;
 }
 
 export class FakeRequest extends EventEmitter {
@@ -36,7 +38,7 @@ export class FakeRequest extends EventEmitter {
   pause() {}
   resume() {}
   private async play(s: Script) {
-    if (s.fail) {
+    if (s.fail && !s.failAfterRows) {
       this.emit("error", s.fail);
       this.emit("done", {});
       return;
@@ -48,6 +50,7 @@ export class FakeRequest extends EventEmitter {
       await new Promise((res) => setImmediate(res));
     }
     if (this.cancelled) this.emit("error", Object.assign(new Error("Canceled."), { code: "ECANCEL" }));
+    else if (s.fail) this.emit("error", s.fail);
     this.emit("done", {});
   }
 }

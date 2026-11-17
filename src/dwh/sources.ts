@@ -59,6 +59,16 @@ function fileText(source: string, sourceSha: string, catalogueSha: string | unde
   return `${header.join("\n")}\n\n${r.pretty}\n`;
 }
 
+/** Converts one listed source the same way dwh:convert does (throws ConvertError). */
+export function convertSource(root: string, source: string): ConvertResult {
+  const model = loadModel(path.join(root, "schema"));
+  const csv = loadCsvIndex(path.join(root, "Database-Description-AMOS-csv.csv"));
+  const mapping = loadMapping(path.join(root, "dwh", "mapping.yaml"));
+  const catalogue = loadCatalogue(path.join(root, "dwh", "catalogue.json"));
+  const text = lf(readFileSync(path.join(root, source), "utf8"));
+  return convertQuery(text, source, { model, csv, mapping, ...(catalogue ? { catalogue } : {}) });
+}
+
 /** Every generated file (path relative to root -> content, LF line ends), manifest included. */
 export function generateAll(root: string, opts: { cataloguePath?: string } = {}): Map<string, string> {
   const model = loadModel(path.join(root, "schema"));
