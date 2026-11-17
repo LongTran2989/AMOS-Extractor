@@ -2,10 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Status:** Revision 2 (2026-11-17), approved direction, Phase 0 done, Phase 0b next. Nothing in Phases 1–4 has been built.
+**Status:** Revision 2.1 (2026-11-17). Phases 0 and 0b done. **Conditional go:** Phase 1 (offline converter, no database) may start; **Phases 2–4 are gated** on re-running the b6 speed test with the real steps query once `WP_STATUS` and `WP_DEPARTMENT_LINK` exist in the DWH (see Phase 0b and "Phase 0b findings"). Nothing in Phases 1–4 has been built.
 
 **Revision history**
 - *Rev 1 (2026-11-17):* PostgreSQL → T-SQL converter, run as four-part linked-server queries on SQL Server.
+- *Rev 2.1 (2026-11-17):* Phase 0b found RPC Out **off** (so `exec_mode: openquery`), Oracle 12.2, `NLS_COMP`/`NLS_SORT` BINARY, AL32UTF8, **no CLOB columns** (long text is `VARCHAR2(4000)`), and pass-through speed of 9–18 s for the steps query (not a clean pass). Decisions are in "Phase 0b findings"; the body below is updated to match.
 - *Rev 2 (2026-11-17):* Phase 0 found that `DWH_DB` is an **Oracle** database behind a SQL Server 2016 relay, and that four-part queries are far too slow (4-table join 37–68 s, 7-table steps query timed out). The converter now emits **Oracle SQL**, which the relay passes through unchanged (`EXEC (…) AT [DWH_DB]` or `OPENQUERY`), so Oracle does the joins and only Oracle's rules apply. The Phase 0 proposals and how Rev 2 settles them are at the end ("Phase 0 findings").
 
 **Your answers (2026-11-17)**
@@ -86,7 +87,7 @@ From Phase 0 (details at the end):
 
 **How the converter works** (unchanged from Rev 1): tree-based with our own printer. Text rewriting is rejected because it cannot tell code from strings or comments, cannot infer types (`date + int` vs `int + int`, month arithmetic), cannot tell CTE names from tables, and cannot detect "something I don't recognise", so it cannot fail loudly.
 
-**Execution mode** is a setting (`exec_mode` in `dwh/mapping.yaml`), decided by Phase 0b (b1, b7): `exec_at` is preferred (bound parameters, no length limit, duplicate column names and row order passed through untouched); `openquery` is the fallback.
+**Execution mode** is a setting (`exec_mode` in `dwh/mapping.yaml`). Phase 0b (b1) found RPC Out off, so it is **`openquery`** today (no bound parameters, 8000-character limit, duplicate output names refused: b7). `exec_at` (bound parameters, no length limit, duplicate names and row order untouched) stays supported in the code and is switched on by changing the setting if the administrator enables RPC Out.
 
 ## A.4 Converter design
 
@@ -168,7 +169,7 @@ wp_header.start_date >= ((CURRENT_DATE - INTERVAL '6' MONTH)::date - DATE '1971-
 | 8 | Oracle reserved word as identifier (`LEVEL`, `COMMENT`, `SIZE`, `USER`…) | Quoted in exact catalogue case (`"LEVEL"`); none used today | `print.test.ts` |
 | 9 | Quoted identifier in the source (`"Order"`) | Rejected (AMOS has no mixed-case names) | `guard.test.ts` |
 | 10 | Column alias `AS z_WP_ID` | `AS "z_WP_ID"` (quoted so Oracle keeps the case); over 30 characters → `E_ALIAS_TOO_LONG` | `print.test.ts` |
-| 11 | Duplicate output names (two `text` columns) | Allowed in `exec_at` mode; in `openquery` mode depends on Phase 0b (b7): if the relay rejects them, `E_DUPLICATE_OUTPUT` (needs `exec_at`) | `print.test.ts`, Task 2.1 |
+| 11 | Duplicate output names (two `text` columns) | Allowed in `exec_at` mode; in `openquery` mode the relay rejects them (confirmed, Phase 0b b7), so `E_DUPLICATE_OUTPUT` (needs `exec_at`, i.e. RPC Out enabled) | `print.test.ts`, Task 2.1 |
 | 12 | Select expression without alias | Allowed, `W_UNNAMED_COLUMN` (Oracle names it by its text) | `print.test.ts` |
 | 13 | `SELECT *` | Allowed, `W_SELECT_STAR` | `guard.test.ts` |
 | 14 | Date arithmetic, `CURRENT_*`, intervals | Per A.4 | `dates.test.ts`: every row, the A.4 example, all six real `* INTERVAL '1 minute'` lines, the 7 h / 24 h chain |
@@ -217,13 +218,13 @@ wp_header.start_date >= ((CURRENT_DATE - INTERVAL '6' MONTH)::date - DATE '1971-
 | 57 | `GROUP BY` ordinal or alias | Resolved to the expression (Oracle allows neither) | `aggregates.test.ts` |
 | 58 | Window functions | `row_number`, `rank`, `dense_rank`, `lag`, `lead`, `COUNT/SUM/MIN/MAX OVER (…)` without a frame: passed through with #36; other frames, named `WINDOW` → rejected | `window.test.ts` |
 | 59 | `DISTINCT ON` | Rejected (needs a derived table alias, which the rules forbid) | `guard.test.ts` |
-| 60 | Plain `DISTINCT` | Passed through; on CLOB → #65 | `guard.test.ts` |
+| 60 | Plain `DISTINCT` | Passed through | `guard.test.ts` |
 | 61 | CTE (`WITH`) | Passed through; `RECURSIVE`, `MATERIALIZED` → rejected | `cte.test.ts` |
 | 62 | Subqueries (`EXISTS`, `NOT EXISTS`, `IN`, scalar, `= ANY`) | Passed through | `cte.test.ts`, incl. the real `NOT EXISTS` query |
 | 63 | Derived table in `FROM`, `LATERAL`, `USING`, `NATURAL JOIN` | Rejected | `guard.test.ts` |
 | 64 | `UNION [ALL]`, `INTERSECT`, `EXCEPT` | Passed through; `EXCEPT` → `MINUS` | `cte.test.ts` |
-| 65 | CLOB columns | Allowed in the select list, `IS NULL`, `LIKE`; in `=`, `<>`, `IN`, `ORDER BY`, `GROUP BY`, `DISTINCT`, set operations → rejected `E_TEXT_COLUMN` | `names.test.ts` with fixture catalogue |
-| 66 | Long text values | Runner `textsize` 2147483647; Phase 0b (b8) compares CLOB lengths across the relay; verification compares lengths | Task 2.1, Task 3.2 |
+| 65 | CLOB columns | **Not built.** Phase 0b (b8) found no CLOB columns in `STG_AMOS` (only `VARCHAR2` ≤ 4000 and `NUMBER`), so there is no `E_TEXT_COLUMN` rule. If a CLOB ever appears, the schema diff reports it as `retyped` (error) and the queries using it are refused until the rule is added | `schemaDiff.test.ts` |
+| 66 | Long text values | Long text is `VARCHAR2(4000)`, so the schema diff reports `truncation_risk` for every `text`-typed AMOS column (a live risk: the three longest `text_html` values all stop at exactly 3700 characters; not verifiable in AMOS yet). Page and CSV note it on queries that select such a column; verification reports text-length differences prominently | `schemaDiff.test.ts`, Task 3.2 |
 | 67 | `SELECT` without `FROM` | `FROM DUAL` added | `print.test.ts` |
 | 68 | Comments | Dropped; header names the source; placeholders or `;` inside comments ignored | `preprocess.test.ts` |
 | 69 | Placeholders | Only inside string literals; kept literally in the committed file; at run time `exec_at` binds them as `?` parameters, `openquery` inlines a value only if it matches `^[A-Za-z0-9 ._/-]{1,100}$` after trimming, else refuses; empty → Run disabled | `preprocess.test.ts`, Task 2.1 |
@@ -257,8 +258,8 @@ wp_header.start_date >= ((CURRENT_DATE - INTERVAL '6' MONTH)::date - DATE '1971-
 ```yaml
 linked_server: DWH_DB
 oracle_schema: STG_AMOS
-exec_mode: exec_at            # or openquery (Phase 0b, b1/b7)
-oracle_version: 19            # major version (b2): decides #32/#34
+exec_mode: openquery          # b1: RPC Out is off; exec_at only if the administrator enables it
+oracle_version: 12            # b2 (12.2): FETCH FIRST allowed, decides #32/#34
 nls_comp: BINARY              # b3
 nls_sort: BINARY              # b3
 db_charset: AL32UTF8          # b3
@@ -285,7 +286,7 @@ The AMOS side is a CSV exported from AMOS.
 2. **Oracle-text gate:** `assertReadOnlyOracle(text)` scans the execution text with the shared lexer, outside strings and quoted identifiers: must start with `SELECT` or `WITH`; no `;`, no `@` (database links), no `/*`/`--`; none of `INSERT UPDATE DELETE MERGE INTO CREATE DROP ALTER TRUNCATE GRANT REVOKE COMMIT ROLLBACK SAVEPOINT LOCK BEGIN DECLARE EXECUTE EXEC CALL FOR` (`FOR UPDATE`); every function name must be on the **emitted** allow-list (`NUMTODSINTERVAL ADD_MONTHS TRUNC LAST_DAY LEAST EXTRACT SYS_EXTRACT_UTC SYSTIMESTAMP CAST TO_CHAR COALESCE NULLIF LOWER UPPER ABS MOD COUNT SUM MIN MAX ROW_NUMBER RANK DENSE_RANK LAG LEAD`), so `DBMS_*`, `UTL_*` and anything else is refused. The runner calls it again just before executing.
 3. **Fixed relay statements.** The runner builds exactly one of two templates and nothing else: `EXEC (N'<oracle text, quotes doubled>'[, @p1, …]) AT [DWH_DB]` or `SELECT * FROM OPENQUERY([DWH_DB], N'<oracle text, quotes doubled>')`. The catalogue refresh uses one more fixed statement (A.6). No other T-SQL is ever sent.
 4. **Only converter output runs.** The page sends a source path and parameter values, never SQL. The server checks the path against the known source list, re-reads and re-converts, then runs. No free-text SQL box. `scripts/dwh.ts` is retired; `npm run dwh:run --raw <file>` (for maintainers) runs hand-written Oracle SQL only after the same Oracle-text gate.
-5. **Connection:** `readOnlyIntent: true`, `appName: 'amos-dwh-runner'`, `connectionTimeout: 15000`, `requestTimeout` 120 s preview / 900 s export, `textsize: 2147483647`, `useUTC: true`, pool max 4.
+5. **Connection:** `readOnlyIntent: true`, `appName: 'amos-dwh-runner'`, `connectionTimeout: 15000`, `requestTimeout` 120 s preview / 900 s export, default `textsize` (no CLOB columns), `useUTC: true`, pool max 4.
 6. **Caps:** preview 500 rows: the runner appends `FETCH FIRST 501 ROWS ONLY` (or lowers an existing one) when Oracle ≥ 12c, else wraps `SELECT * FROM (<q>) WHERE ROWNUM <= 501` (not for queries with duplicate output names); it always stops reading at 501 and cancels. Exports stream with the `export_row_limit` and a Stop button.
 7. **Database rights:** the relay login is read-only (Phase 0.4). With pass-through, the **Oracle user** behind the link matters too; Phase 0b (b4) lists its privileges. If it can write, the app gates still hold, but we ask the administrator for a read-only mapping.
 8. **Web server:** port 4870 (next free up to 4880).
@@ -375,21 +376,25 @@ The AMOS side is a CSV exported from AMOS.
 
 - [x] 0.1–0.8 (see "Phase 0 findings" at the end).
 
-## Phase 0b — Pass-through probes (about an hour; gates Phase 1)
+## Phase 0b — Pass-through probes (done 2026-11-17; conditional go)
 
 Read-only. I run the DWH ones through `scripts/dwh.ts` after you approve each (each is a `SELECT` or a `sys.servers` read); you run b10 in AMOS. **Go/no-go:** b6 must show the pass-through steps query returning its first 50 rows in under 15 s. If it doesn't, stop: the speed problem is on the Oracle side, and we take it to the DWH administrator before building anything.
 
-- [ ] **b1 RPC Out:** `SELECT is_rpc_out_enabled, is_data_access_enabled FROM sys.servers WHERE name = 'DWH_DB'` → `exec_at` possible?
-- [ ] **b2 Oracle version:** `SELECT * FROM OPENQUERY([DWH_DB], 'SELECT BANNER FROM V$VERSION')` (fallback `PRODUCT_COMPONENT_VERSION`) → `oracle_version`.
-- [ ] **b3 NLS and time:** via `OPENQUERY`: `NLS_SESSION_PARAMETERS` (`NLS_COMP`, `NLS_SORT`), `NLS_DATABASE_PARAMETERS` (`NLS_CHARACTERSET`, `NLS_NCHAR_CHARACTERSET`), `SELECT DBTIMEZONE, SESSIONTIMEZONE, SYS_EXTRACT_UTC(SYSTIMESTAMP) FROM DUAL`.
-- [ ] **b4 Oracle-side rights:** via `OPENQUERY`: `SELECT PRIVILEGE FROM SESSION_PRIVS`, `SELECT ROLE FROM SESSION_ROLES`.
-- [ ] **b5 Column-reference form:** `SELECT WO_HEADER.EVENT_PERFNO_I FROM STG_AMOS.WO_HEADER WHERE ROWNUM <= 1` through `OPENQUERY`.
-- [ ] **b6 Speed (go/no-go):** a hand-written Oracle version of `scripts/example_steps.sql` (first 20 rows) and of the trimmed 7-table steps query from Phase 0.6 (first 50 rows, only tables that exist), each through `OPENQUERY` (and `EXEC … AT` if b1 allows), three runs each; record times.
-- [ ] **b7 Duplicate column names:** `SELECT * FROM OPENQUERY([DWH_DB], 'SELECT 1 AS "a", 2 AS "a" FROM DUAL')`, and the same through `EXEC … AT` if b1 allows.
-- [ ] **b8 Long text and Vietnamese:** catalogue type of `WO_TEXT_DESCRIPTION.TEXT_HTML`; for the three longest values, Oracle `DBMS_LOB.GETLENGTH` (a read-only function, used in this manual probe only) vs the length received through the relay; and one row with Vietnamese text compared by you with the AMOS application.
-- [ ] **b9 Types through the relay:** the SQL Server types reported for a `NUMBER` column, a `DATE '1971-12-31' + START_DATE` expression and a CLOB.
-- [ ] **b10 AMOS (you, in AMOS):** `SELECT current_setting('TimeZone');`.
-- [ ] **b11 Record** results in `dwh/mapping.yaml` (the fields in A.6) and a "Phase 0b findings" section at the end of this file. Commit and push.
+**Outcome (2026-11-17): all probes done, results in "Phase 0b findings". b6 was not a clean pass; conditional go approved: Phase 1 may start now; Phases 2–4 wait for the b6 re-test below.**
+
+**b6 re-test (gate for Phase 2):** once `WP_STATUS` and `WP_DEPARTMENT_LINK` exist in the DWH, run the real steps query (department filter and status filter, first 50 rows) through `OPENQUERY`, three runs. Pass = first rows in under 15 s on at least the warm runs and under 30 s cold. If it fails, take the numbers to the DWH administrator (indexes and statistics on the join columns) before building Phase 2.
+
+- [x] **b1 RPC Out:** `SELECT is_rpc_out_enabled, is_data_access_enabled FROM sys.servers WHERE name = 'DWH_DB'` → `exec_at` possible?
+- [x] **b2 Oracle version:** `SELECT * FROM OPENQUERY([DWH_DB], 'SELECT BANNER FROM V$VERSION')` (fallback `PRODUCT_COMPONENT_VERSION`) → `oracle_version`.
+- [x] **b3 NLS and time:** via `OPENQUERY`: `NLS_SESSION_PARAMETERS` (`NLS_COMP`, `NLS_SORT`), `NLS_DATABASE_PARAMETERS` (`NLS_CHARACTERSET`, `NLS_NCHAR_CHARACTERSET`), `SELECT DBTIMEZONE, SESSIONTIMEZONE, SYS_EXTRACT_UTC(SYSTIMESTAMP) FROM DUAL`.
+- [x] **b4 Oracle-side rights:** via `OPENQUERY`: `SELECT PRIVILEGE FROM SESSION_PRIVS`, `SELECT ROLE FROM SESSION_ROLES`.
+- [x] **b5 Column-reference form:** `SELECT WO_HEADER.EVENT_PERFNO_I FROM STG_AMOS.WO_HEADER WHERE ROWNUM <= 1` through `OPENQUERY`.
+- [x] **b6 Speed (go/no-go):** a hand-written Oracle version of `scripts/example_steps.sql` (first 20 rows) and of the trimmed 7-table steps query from Phase 0.6 (first 50 rows, only tables that exist), each through `OPENQUERY` (and `EXEC … AT` if b1 allows), three runs each; record times.
+- [x] **b7 Duplicate column names:** `SELECT * FROM OPENQUERY([DWH_DB], 'SELECT 1 AS "a", 2 AS "a" FROM DUAL')`, and the same through `EXEC … AT` if b1 allows.
+- [x] **b8 Long text and Vietnamese:** catalogue type of `WO_TEXT_DESCRIPTION.TEXT_HTML`; for the three longest values, Oracle `DBMS_LOB.GETLENGTH` (a read-only function, used in this manual probe only) vs the length received through the relay; and one row with Vietnamese text compared by you with the AMOS application.
+- [x] **b9 Types through the relay:** the SQL Server types reported for a `NUMBER` column, a `DATE '1971-12-31' + START_DATE` expression and a CLOB.
+- [x] **b10 AMOS (you, in AMOS):** `SELECT current_setting('TimeZone');`.
+- [x] **b11 Record** results in `dwh/mapping.yaml` (the fields in A.6) and a "Phase 0b findings" section at the end of this file. Commit and push.
 
 **Exit:** go/no-go passed; every mapping field in A.6 has a value; anything that contradicts Rev 2 is written up and agreed before Phase 1.
 
@@ -453,7 +458,7 @@ Read-only. I run the DWH ones through `scripts/dwh.ts` after you approve each (e
   - `availability(scope: ScopeInfo, cat?: Catalogue): { available: boolean; missing: string[] }`
   - `type SqlType = "int" | "numeric" | "float" | "text" | "date" | "timestamp" | "interval" | "unknown"`
 
-- [ ] **Step 1: Write failing tests** for A.5 #1, #2, #4–#8, #65 (CLOB in the fixture), #78, #79, and `availability lists WP_STATUS and WP_DEPARTMENT_LINK for extract_wp_seqs_steps.sql`.
+- [ ] **Step 1: Write failing tests** for A.5 #1, #2, #4–#8, #78, #79, and `availability lists WP_STATUS and WP_DEPARTMENT_LINK for extract_wp_seqs_steps.sql`.
 - [ ] **Step 2: Run** `node --test test/dwh/names.test.ts`. Expected: FAIL.
 - [ ] **Step 3: Implement.** Without a catalogue: upper-case names, availability `unknown`, one `W_NO_CATALOGUE`.
 - [ ] **Step 4: Run.** Expected: PASS.
@@ -536,6 +541,8 @@ Read-only. I run the DWH ones through `scripts/dwh.ts` after you approve each (e
 **Phase 1 test plan:** unit tests for the A.5 rows, golden checks over all 27 real sources, determinism, the safety list. Exit: `npm test`, `npm run typecheck`, `npm run dwh:check` pass; the user has seen one converted file.
 
 ## Phase 2 — Runner, catalogue, schema diff
+
+> **Gate:** do not start until the b6 re-test (Phase 0b) has passed with the real steps query. Phase 1 has no such dependency. Build the `openquery` path first; keep `exec_at` behind `exec_mode` (RPC Out is off today).
 
 ### Task 2.1: Connection, relay wrapper, runner, value formatting
 
@@ -697,7 +704,8 @@ Read-only. I run the DWH ones through `scripts/dwh.ts` after you approve each (e
 
 ## Open items
 
-1. **Ask the DWH administrator** (draft message given in the session): add the six missing tables to `STG_AMOS` (`wp_status` and `wp_department_link` first: they unblock 12 of 15 queries); whether RPC Out can be enabled on `DWH_DB` for our login (enables `exec_at`); confirm the Oracle user behind the link is read-only. **Phases 2–4 have little value until the tables exist**: today only `extract_all_parts.sql` can run.
+1. **Ask the DWH administrator** (draft message given in the session): add the six missing tables to `STG_AMOS` (`wp_status` and `wp_department_link` first: they unblock 12 of 15 queries); whether RPC Out can be enabled on `DWH_DB` for our login (enables `exec_at`); confirm the Oracle user behind the link is read-only (Phase 0b b4 showed no system-level write rights, table grants unknown); whether the copy truncates long text (three `text_html` values stop at exactly 3700 characters; `text` columns are `VARCHAR2(4000)`); indexes and statistics on the join columns (b6: 9–18 s for the steps query). **Phases 2–4 have little value until the tables exist**: today only `extract_all_parts.sql` can run.
+1a. **Choose verification keys from documents visible in AMOS** (the AMOS query tool shows only some documents; e.g. work order 8802418 is not found in `wo_text_description` there), and re-check the Vietnamese and 3700-character questions once such rows are available.
 2. **Before Phase 4:** a certificate from IT for the host PC (else a one-time browser warning) and approval to share DWH data this way; choose the access code.
 
 Decisions I made that you may want to override: output names keep the source spelling (`z_WP_ID`, quoted in Oracle); preview 500 rows, export limit 2,000,000; the query list covers root files plus `queries/wp_seqs/`; generated files in `queries/dwh/` hold Oracle SQL.
@@ -706,7 +714,7 @@ Decisions I made that you may want to override: output names keep the source spe
 
 | # | Risk | Likelihood / impact | Mitigation |
 |---|---|---|---|
-| R1 | Pass-through is also slow (no indexes on the staging tables) | Medium / high | Phase 0b go/no-go before any build; then the administrator |
+| R1 | Pass-through is also slow (no indexes on the staging tables) | Medium / high | Phase 0b b6: 9–18 s, not clean. Conditional go: Phase 1 offline only; b6 re-test with the real query gates Phase 2; then the administrator |
 | R2 | Six missing tables stay missing | Medium / high | Ask now; the converter still works and shows ⊘ with the reason |
 | R3 | DWH renames/retypes columns, or the snapshot goes stale | Medium / medium | Schema diff, live compile check, refresh button, #78/#79 |
 | R4 | Oracle `''` = NULL changes results | Present / medium | `E_EMPTY_STRING`, `W_EMPTY_IS_NULL`, verification treats NULL vs empty as expected |
@@ -723,7 +731,7 @@ Decisions I made that you may want to override: output names keep the source spe
 | R15 | Host PC asleep or off | High / low | Autostart; power setting in the guide |
 | R16 | Firewall/certificate need IT | Medium / medium | One `netsh` command for IT; self-signed fallback; unshared mode meanwhile |
 | R17 | One person's huge export slows everyone | Medium / low | One query per visitor, four in total, timeouts, row limit |
-| R18 | `openquery` mode limits (8000 chars, no parameters, duplicate names) | Medium / medium | Prefer `exec_at` (ask for RPC Out); `E_TOO_LONG`, strict values, `E_DUPLICATE_OUTPUT` |
+| R18 | `openquery` mode limits (8000 chars, no parameters, duplicate names) | Present / medium | Real today (RPC Out off, b1/b7): `openquery` is the mode; `E_TOO_LONG`, strict values, `E_DUPLICATE_OUTPUT`; ask for RPC Out |
 
 ---
 
@@ -758,7 +766,7 @@ Probes 0.1–0.6 were read-only SELECTs and catalogue procedures run through `sc
 
 # Phase 0b findings (2026-11-17)
 
-All DWH probes were read-only `SELECT`s sent through `scripts/dwh.ts`; b10 and the AMOS comparisons were run by you in AMOS. Values are recorded in `dwh/mapping.yaml`. **Nothing in the body of this plan has been changed; the proposals below wait for your OK.**
+All DWH probes were read-only `SELECT`s sent through `scripts/dwh.ts`; b10 and the AMOS comparisons were run by you in AMOS. Values are recorded in `dwh/mapping.yaml`. **Decision (2026-11-17): C3 option (a), the conditional go, was approved, and C1, C2, C4 were applied to the plan body (Rev 2.1).** The text under "Proposed changes" is kept as the record of what was proposed.
 
 ## Results
 
@@ -784,7 +792,7 @@ All DWH probes were read-only `SELECT`s sent through `scripts/dwh.ts`; b10 and t
 
 Caveats: 6b had no status or department filter (those tables are missing in the DWH) and used a 6-month start-date window with a global `ORDER BY`; the real query is narrower in one way and untested in others. The first run of each is slower (cold cache on the Oracle side).
 
-## Proposed changes (not applied; need your OK)
+## Proposed changes (all approved and applied, Rev 2.1; C3 = option (a))
 
 **C1. Run in `openquery` mode (RPC Out is off).** Consequences already in the plan as R18: no bound parameters (placeholder values are checked against `^[A-Za-z0-9 ._/-]{1,100}$` and refused otherwise), 8000-character limit (largest current query about 3.3 KB), duplicate output names refused. Proposal: build `openquery` first; ask the DWH administrator whether RPC Out can be turned on, which would remove these limits (a one-setting change on the relay).
 
