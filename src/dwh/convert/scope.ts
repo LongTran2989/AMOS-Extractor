@@ -118,7 +118,11 @@ class Resolver {
     }
     const branches: PgNode[] = [];
     for (let b: PgNode = node; b; b = b._next) branches.push(b);
-    const firstOutputs = new Set((node.columns ?? []).map((c: PgNode) => outputName(c)?.toLowerCase()).filter(Boolean));
+    const firstOutputs = new Set<string>();
+    for (const c of node.columns ?? []) {
+      const n = outputName(c);
+      if (n) firstOutputs.add(n.toLowerCase());
+    }
     branches.forEach((b, i) => {
       const compoundOrder = branches.length > 1 && i === branches.length - 1;
       this.select(b, withScope, compoundOrder ? firstOutputs : undefined);
