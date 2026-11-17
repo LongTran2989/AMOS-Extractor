@@ -1,0 +1,60 @@
+# DWH mapping (hand-edited, committed). Fields from plan section A.6, filled from Phase 0 (2026-11-17).
+# See "Phase 0 findings" at the end of docs/dwh-converter-plan.md.
+
+# Linked-server table prefix. [DWH_DB]..[STG_AMOS].[X] works; three-part [DWH_DB].[STG_AMOS].[X] fails.
+prefix: "[DWH_DB]..[STG_AMOS]"
+
+# The DWH stores names in upper case (Oracle). The linked server also accepts lower-case names
+# (probe 0.5 ran with lower-case table and column names), so the upper-case default is safe.
+table_case: upper
+
+# Per-column renames. None needed so far: probe 0.3 showed upper-case names only, no renames.
+columns: {}
+
+# Not turned on: the DWH side is Oracle (see dwh_facts), case rules are decided remotely.
+strict_string_compare: false
+
+# AMOS PostgreSQL database: datcollate = datctype = en_US.UTF-8 (probe 0.7). That is not C/POSIX,
+# so a byte-order COLLATE would NOT match AMOS ordering. String ORDER BY gets W_STRING_ORDER.
+amos_collation: other
+
+# Hard limit for CSV downloads (A.8 #5).
+export_row_limit: 2000000
+
+# Facts learned in Phase 0. Informational; the converter may read some of them later.
+dwh_facts:
+  relay_server: "SQL Server 2016 RTM (13.0.1601.5) Enterprise"   # no GREATEST/LEAST/DATETRUNC/STRING_AGG
+  relay_collation: SQL_Latin1_General_CP1_CI_AS                   # case-insensitive
+  relay_clock: "local time is UTC+7; SYSUTCDATETIME() is UTC"
+  linked_server:
+    name: DWH_DB
+    target: Oracle                         # provider OraOLEDB.Oracle, NOT SQL Server
+    uses_remote_collation: true
+    is_collation_compatible: false
+  catalogue_form: openquery                # OPENQUERY(DWH_DB, 'SELECT ... FROM ALL_TAB_COLUMNS WHERE OWNER = ''STG_AMOS''')
+  catalogue_forms_tried:
+    information_schema: fails              # error 7314, provider has no such table
+    sp_columns_ex: works_but_duplicates    # one row per Oracle type name for text columns
+    openquery_all_tab_columns: works       # clean, exact names/types/nullability
+  login_read_only: true                    # not sysadmin, no CONTROL SERVER
+  date_time_columns: "Oracle NUMBER (whole numbers), same day/ms counts as AMOS"
+  freshness:
+    mutation: "date int, days since 1971-12-31 (WP_HEADER max = 2026-11-17)"
+    mutation_time: "ms since midnight; max on that day = 09:22:10 UTC"
+    estimate: "near real time (within minutes) at 2026-11-17 09:2x UTC"
+  wp_header_ranges:
+    start_date: { min: 10659, max: 83460 }     # 2001-03-07 .. 2200-07-03 (sentinel-like, far below 9999-12-31)
+    end_date_max: 83461                        # 2200-07-04
+  tables_in_stg_amos: 59
+  amos_tables_missing_in_dwh:                  # used by repo queries, absent from ALL_OBJECTS for STG_AMOS
+    - wp_status
+    - wp_department_link
+    - cml_reference
+    - oem_doc_partno
+    - taskcard_coversheet_info
+    - time_captured_history
+  amos_timezone: unconfirmed                   # probe 0.7 first statement (current_setting('TimeZone')) not yet answered
+  speed:
+    single_table_count: "about 1-3 s"
+    four_table_join_top20: "37-68 s"
+    seven_table_steps_query_top50: "timed out at 120 s"

@@ -370,14 +370,14 @@ Phases are in delivery order. Phase 1 needs no database and can start right away
 
 Nothing here writes. I run the DWH ones through the existing `scripts/dwh.ts` after you approve each; you run the AMOS ones in the AMOS application.
 
-- [ ] **0.1 DWH server facts:** `SELECT @@VERSION, SERVERPROPERTY('Collation'), SYSUTCDATETIME(), SYSDATETIME()` → version (decides #75 later), server collation, server clock offset.
-- [ ] **0.2 Linked server:** `SELECT name, product, provider, is_collation_compatible, uses_remote_collation, collation_name, is_data_access_enabled FROM sys.servers WHERE name = 'DWH_DB'` → is the target SQL Server, what collation (decides #41).
-- [ ] **0.3 Catalogue access:** try the three forms in A.6 with `TOP 5`; record which works.
-- [ ] **0.4 Login rights:** `SELECT IS_SRVROLEMEMBER('sysadmin'), HAS_PERMS_BY_NAME(NULL, NULL, 'CONTROL SERVER')`.
-- [ ] **0.5 Freshness and ranges:** `SELECT MAX(mutation), MIN(start_date), MAX(start_date), MAX(end_date) FROM [DWH_DB]..[STG_AMOS].[WP_HEADER]` (#20, A.7 step 5).
-- [ ] **0.6 Speed:** time the hand-converted `scripts/example_steps.sql` (already `TOP 20`) and one hand-converted steps query with `TOP 50` → decides whether risk R1 is real.
-- [ ] **0.7 AMOS (you, in AMOS):** `SELECT current_setting('TimeZone'), version();` and `SELECT datcollate, datctype FROM pg_database WHERE datname = current_database();` → confirms the UTC assumption (#19) and sets `amos_collation` (#39).
-- [ ] **0.8 Record** results in `dwh/mapping.yaml` and a short "Phase 0 findings" section appended to this file. Commit.
+- [x] **0.1 DWH server facts:** `SELECT @@VERSION, SERVERPROPERTY('Collation'), SYSUTCDATETIME(), SYSDATETIME()` → version (decides #75 later), server collation, server clock offset.
+- [x] **0.2 Linked server:** `SELECT name, product, provider, is_collation_compatible, uses_remote_collation, collation_name, is_data_access_enabled FROM sys.servers WHERE name = 'DWH_DB'` → is the target SQL Server, what collation (decides #41).
+- [x] **0.3 Catalogue access:** try the three forms in A.6 with `TOP 5`; record which works.
+- [x] **0.4 Login rights:** `SELECT IS_SRVROLEMEMBER('sysadmin'), HAS_PERMS_BY_NAME(NULL, NULL, 'CONTROL SERVER')`.
+- [x] **0.5 Freshness and ranges:** `SELECT MAX(mutation), MIN(start_date), MAX(start_date), MAX(end_date) FROM [DWH_DB]..[STG_AMOS].[WP_HEADER]` (#20, A.7 step 5).
+- [x] **0.6 Speed:** time the hand-converted `scripts/example_steps.sql` (already `TOP 20`) and one hand-converted steps query with `TOP 50` → decides whether risk R1 is real.
+- [x] **0.7 AMOS (you, in AMOS):** `SELECT current_setting('TimeZone'), version();` and `SELECT datcollate, datctype FROM pg_database WHERE datname = current_database();` → confirms the UTC assumption (#19) and sets `amos_collation` (#39).
+- [x] **0.8 Record** results in `dwh/mapping.yaml` and a short "Phase 0 findings" section appended to this file. Commit.
 
 **Test plan:** none (facts only). Exit: every value marked "set after Phase 0" above has a value.
 
@@ -715,3 +715,32 @@ Decisions I made that you may want to override: output column names keep the sou
 | R15 | Host PC asleep, off or restarted: colleagues can't use the page | High / low | Autostart in the Startup folder; power setting in the guide; colleagues get the browser's "can't connect" page, explained in the guide |
 | R16 | Firewall or certificate setup needs IT / admin rights | Medium / medium | One `netsh` command for IT; self-signed fallback; unshared mode works for you meanwhile |
 | R17 | One person's huge export slows the DWH for everyone | Medium / low | One running query per visitor, four in total, timeouts, export row limit |
+
+---
+
+# Phase 0 findings (2026-11-17)
+
+Probes 0.1–0.6 were read-only SELECTs and catalogue procedures run through `scripts/dwh.ts`; 0.7 was run by you in AMOS. Values are recorded in `dwh/mapping.yaml`.
+
+## What we found
+
+| Probe | Result |
+|---|---|
+| 0.1 | Relay is **SQL Server 2016 RTM** (Enterprise). Collation `SQL_Latin1_General_CP1_CI_AS` (case-insensitive). Server local clock is UTC+7; `SYSUTCDATETIME()` is UTC. |
+| 0.2 | `DWH_DB` is a linked **Oracle** database (`OraOLEDB.Oracle`), not SQL Server. `uses_remote_collation = true`, `is_collation_compatible = false`. |
+| 0.3 | `[DWH_DB]..INFORMATION_SCHEMA.COLUMNS` fails (error 7314). `EXEC sp_columns_ex` works but repeats text columns once per Oracle type name. `OPENQUERY(DWH_DB, 'SELECT … FROM ALL_TAB_COLUMNS WHERE OWNER = ''STG_AMOS''')` works and is clean. Names are upper case; date/time columns are Oracle `NUMBER` (whole numbers). Lower-case names also resolve in four-part queries. |
+| 0.4 | Not sysadmin, no CONTROL SERVER: the login is read-only (R8 stays low). |
+| 0.5 | `WP_HEADER.mutation` is a date int: max = 2026-11-17, `mutation_time` max = 09:22:10 UTC, i.e. the DWH is **current to within minutes** (R2 is much smaller than feared). `start_date` 2001-03-07 … 2200-07-03, `end_date` max 2200-07-04: sentinel-like but far below 9999-12-31 (R7 low). |
+| 0.6 | Single-table count: 1–3 s. Hand-converted 4-table `example_steps.sql` (`TOP 20`): **37–68 s**. Trimmed 7-table steps query (`TOP 50`): **timed out at 120 s**. R1 is real; the slowness is in multi-table joins and `ORDER BY`, not the link itself. |
+| 0.7 | AMOS `datcollate = datctype = en_US.UTF-8` (not C/POSIX) → `amos_collation: other`. The `current_setting('TimeZone')` result was **not provided**; the UTC assumption (#19) is still unconfirmed on the AMOS side. |
+| extra | `STG_AMOS` holds only 59 objects. **6 of the 20 tables used by repo queries are missing:** `wp_status`, `wp_department_link`, `cml_reference`, `oem_doc_partno`, `taskcard_coversheet_info`, `time_captured_history`. Affected: both split WP-sequences templates (so all 12 generated files), `extract_han_workpacks_*`, `extract_wp_materials`, `extract_wp_seqs_parameterized`, the timebookings-history queries, the parts and taskcard queries. |
+
+## Where this contradicts the plan, and the proposed changes (NOT applied, awaiting approval)
+
+1. **The target is Oracle, not SQL Server.** The plan assumes SQL Server behaviour behind the link. Proposed: add a short "Oracle target" note to Part A and keep the converter's output as T-SQL for the relay, but (a) treat every string comparison, `DISTINCT`, `ORDER BY` and `GROUP BY` on text as possibly decided by Oracle (case-sensitive, binary) or by the relay (case-insensitive), so `W_STRING_COMPARE` and `W_STRING_ORDER` apply to all of them; (b) the schema diff (A.6) must read Oracle types as the relay reports them (`NUMBER`, `VARCHAR2`, `NVARCHAR2`, `CLOB`, `DATE`), not SQL Server types; (c) Oracle treats an empty string as NULL, so add a warning for `= ''` and `IS NULL` on text.
+2. **Catalogue form.** Use `OPENQUERY … ALL_TAB_COLUMNS` (third in A.6's list, now first choice). The output gate (A.8) must allow `OPENQUERY` for this one fixed query only.
+3. **Missing tables.** Six AMOS tables do not exist in the DWH, so many source queries can never run there. Proposed: the converter checks tables against the catalogue first and refuses with `E_MISSING_IN_DWH` naming the table; the manifest and the page show those queries as "not available in the DWH"; ask the DWH administrator whether the six tables can be added to `STG_AMOS`. Until then Phase 1's golden tests only cover queries whose tables exist.
+4. **Speed (R1).** Plan mitigations (preview caps, `TOP`) are not enough: `TOP` does not stop SQL Server pulling the joined tables across the link. Options to decide before Phase 2: (a) accept and show a "slow" notice; (b) have the converter send the whole query to Oracle with `OPENQUERY` (Oracle does the joins; needs an Oracle-SQL printer, a large addition); (c) ask the DWH administrator about linked-server settings or a view. I recommend asking the administrator first and deciding after seeing the answer.
+5. **Freshness (A.7 #5).** Use `MAX(mutation)` + `MAX(mutation_time)` on one table (done above), but since the DWH is near real time, the frozen-clock step can use a recent time and "drift" is expected to be small.
+6. **SQL Server 2016 limits.** No `STRING_AGG`, `GREATEST`/`LEAST`, `DATETRUNC`, `IS DISTINCT FROM`: all are already rejected (#23, #25, #75), so no change.
+7. **Still open:** AMOS `TimeZone` (probe 0.7, first statement).
