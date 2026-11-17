@@ -13,6 +13,8 @@ export interface CteOutput {
   /** Output name as written (alias or column name). */
   name: string;
   expr: PgExpr;
+  /** True when the name comes from an AS alias (printed quoted). */
+  aliased: boolean;
 }
 
 export interface CteInfo {
@@ -111,7 +113,7 @@ class Resolver {
       const info: CteInfo = { name, outputs: new Map() };
       for (const col of stmt.columns ?? []) {
         const n = outputName(col);
-        if (n) info.outputs.set(n.toLowerCase(), { name: n, expr: col.expr });
+        if (n) info.outputs.set(n.toLowerCase(), { name: n, expr: col.expr, aliased: typeof col.as === "string" && col.as.length > 0 });
       }
       withScope.ctes.set(name, info);
       this.cteNames.set(name, info);
