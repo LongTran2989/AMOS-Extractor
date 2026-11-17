@@ -365,6 +365,13 @@ export function oracleColumnName(ref: string, ctx: NameCtx): { name: string; ali
   return rename ? { name, aliasAs: column } : { name };
 }
 
+/** Oracle data type of an AMOS column in the catalogue snapshot, if known. */
+export function catalogueDataType(table: string, column: string, ctx: NameCtx): string | undefined {
+  if (!ctx.catalogue) return undefined;
+  const dwh = ctx.mapping.columns[`${table}.${column}`]?.dwh ?? column;
+  return catIndex(ctx.catalogue).get(table.toUpperCase())?.columns.get(dwh.toUpperCase())?.dataType;
+}
+
 /** Which of the query's tables and columns the DWH snapshot lacks (#6). */
 export function availability(
   scope: ScopeInfo,

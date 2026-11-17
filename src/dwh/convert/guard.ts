@@ -32,7 +32,7 @@ const JOINS = new Set(["JOIN", "INNER JOIN", "LEFT JOIN", "LEFT OUTER JOIN", "RI
 const SET_OPS = new Set(["union", "union all", "intersect", "except"]);
 const SELECT_KEYS = new Set([
   "with", "type", "options", "distinct", "columns", "into", "from", "where", "groupby", "having", "orderby", "limit",
-  "window", "_next", "set_op", "loc", "parentheses_symbol", "collate", "_orderby", "_limit", "_parentheses",
+  "window", "_next", "set_op", "loc", "parentheses_symbol", "collate",
 ]);
 
 /** Constructs the parser would mis-read or reject with an unhelpful message: refused by name first. */
@@ -331,6 +331,7 @@ class Walker {
         return;
       case "function": {
         const name = functionName(node);
+        if (node.over && !SOURCE_FUNCTIONS.has(name)) this.fail("E_UNSUPPORTED_FUNCTION", `The window function ${name} is not supported.`, name);
         if (node.over) this.fail("E_UNSUPPORTED", `${name}(…) OVER is not supported.`, name);
         if (name === "EXISTS" || name === "ANY") {
           const args = node.args?.value ?? [];
@@ -379,6 +380,11 @@ class Walker {
       case "extract": {
         const field = String(node.args?.field ?? "").toUpperCase();
         if (!EXTRACT_FIELDS.has(field)) this.fail("E_UNSUPPORTED", `EXTRACT(${field} …) is not supported (only YEAR, MONTH, DAY, HOUR, MINUTE).`, "EXTRACT");
+        // node-sql-parser reads EXTRACT(YEAR FROM DATE 'x' + n) as a cast of 'x' only; refuse unless it is a plain typed literal.
+        const ct = node.args?.cast_type;
+        if (ct && (!["DATE", "TIMESTAMP"].includes(String(ct).toUpperCase()) || node.args.source?.type !== "single_quote_string")) {
+          this.fail("E_UNSUPPORTED", "Put parentheses around the value in EXTRACT, e.g. EXTRACT(YEAR FROM (DATE '1971-12-31' + table.column)).", "EXTRACT");
+        }
         this.expr(node.args.source);
         return;
       }

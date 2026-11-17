@@ -192,6 +192,14 @@ export function rewriteDateExpr(expr: PgExpr, scope: ScopeInfo, ctx: RewriteCtx)
     case "extract": {
       const field = String(expr.args?.field ?? "").toUpperCase();
       const src = expr.args?.source;
+      const ct = String(expr.args?.cast_type ?? "").toUpperCase();
+      if (ct) {
+        // EXTRACT(YEAR FROM DATE '2026-01-31'): a typed literal (the guard refuses anything else).
+        const v = String(src?.value ?? "");
+        if (!(ct === "DATE" ? DATE_RE : TS_RE).test(v)) failAt(ctx, expr, "E_UNSUPPORTED", `Write the ${ct.toLowerCase()} as ${ct} '${ct === "DATE" ? "YYYY-MM-DD" : "YYYY-MM-DD HH:MM:SS"}'.`);
+        const lit = ct === "DATE" ? dateLit(v) : tsLit(v);
+        return field === "HOUR" || field === "MINUTE" ? extract(field, cast(lit, "TIMESTAMP")) : extract(field, lit);
+      }
       const st = inferType(src, scope);
       if (st === "unknown") failAt(ctx, expr, "E_TYPE_UNKNOWN", `Cannot tell the type of the value in EXTRACT(${field} FROM …).`);
       if (st !== "date" && st !== "timestamp") failAt(ctx, expr, "E_UNSUPPORTED", `EXTRACT needs a date or timestamp (got ${st}).`);
