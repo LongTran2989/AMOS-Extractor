@@ -1,1 +1,4 @@
 node_modules/
+columns_description.json
+scratch_parse.cjs
+test_db.js
