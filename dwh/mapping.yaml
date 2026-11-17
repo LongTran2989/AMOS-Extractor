@@ -42,6 +42,7 @@ dwh_facts:
     privileges: [SET CONTAINER, CREATE DATABASE LINK, CREATE SESSION]
     roles: [CONNECT]
   column_reference_form: "TABLE.COLUMN without alias works (b5)"
+  openquery_text_limit: "8000 bytes = 4000 characters as N'...' (Phase 2: a 7,889-character N'...' text gave SQL Server error 103)"
   duplicate_output_names: "refused by OPENQUERY (SQL Server error 492); exec_at not testable (RPC Out off)"   # b7
   column_types_in_stg_amos:                # b8, whole schema: only these two types exist
     VARCHAR2: { columns: 1122, max_length: 4000 }
@@ -93,3 +94,17 @@ dwh_facts:
     cold_run: "not measured (the first three runs were not timed by mistake; the workpack was cached afterwards)"
     rows: 50                                   # identical in all six runs
     gate_passed: true                          # warm far under 15 s; cold accepted as unmeasured (earlier, wider 6b cold run: 18 s, under 30 s)
+  phase2_live:                                 # 2026-11-17, read-only, approved by the user
+    catalogue: "1999 columns in 59 tables (dwh/catalogue.json)"
+    extract_all_parts_run: "refused by Oracle: ORA-00904 PART.MANUAL_TARGET_STOCK (also missing: PART.TARGET_STOCK)"
+    expression_probes: "24 of 24 PASS"
+    queries_available_as_written: 0
+  part_numbers_stored_as_text:                 # float8 in AMOS, VARCHAR2 in the DWH (schema diff: retyped)
+    - part.alert_qty
+    - part.max_purch
+    - part.min_safety_stock
+    - part.reord_level
+    - part.safety_stock
+    - part.weight
+    - part_request_2.qty
+  other_tables_missing_in_dwh: [work_template, wp_history]   # described in schema/, not used by repo queries

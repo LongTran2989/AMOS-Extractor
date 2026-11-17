@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Status:** Revision 2.1 (2026-11-17). Phases 0, 0b and 1 done. **The b6 re-test passed (2026-11-17, warm 1.4–1.6 s; see "Phase 0b findings")**, so Phase 2 may start. **The six missing DWH tables cannot be added (decision 2026-11-17)**: workarounds or dropping some information are decided later, per query. Phases 3–4 not started.
+**Status:** Revision 2.1 (2026-11-17). Phases 0, 0b, 1 and 2 done (Phase 2 results in "Phase 2 findings" at the end). **The b6 re-test passed (2026-11-17, warm 1.4–1.6 s; see "Phase 0b findings")**. **The six missing DWH tables cannot be added (decision 2026-11-17)**: workarounds or dropping some information are decided later, per query; with the real catalogue **no repo query runs in the DWH as written today**. Phases 3–4 not started.
 
 **Revision history**
 - *Rev 1 (2026-11-17):* PostgreSQL → T-SQL converter, run as four-part linked-server queries on SQL Server.
@@ -87,7 +87,7 @@ From Phase 0 (details at the end):
 
 **How the converter works** (unchanged from Rev 1): tree-based with our own printer. Text rewriting is rejected because it cannot tell code from strings or comments, cannot infer types (`date + int` vs `int + int`, month arithmetic), cannot tell CTE names from tables, and cannot detect "something I don't recognise", so it cannot fail loudly.
 
-**Execution mode** is a setting (`exec_mode` in `dwh/mapping.yaml`). Phase 0b (b1) found RPC Out off, so it is **`openquery`** today (no bound parameters, 8000-character limit, duplicate output names refused: b7). `exec_at` (bound parameters, no length limit, duplicate names and row order untouched) stays supported in the code and is switched on by changing the setting if the administrator enables RPC Out.
+**Execution mode** is a setting (`exec_mode` in `dwh/mapping.yaml`). Phase 0b (b1) found RPC Out off, so it is **`openquery`** today (no bound parameters, 4000-character limit for the `N'…'` text (Phase 2), duplicate output names refused: b7). `exec_at` (bound parameters, no length limit, duplicate names and row order untouched) stays supported in the code and is switched on by changing the setting if the administrator enables RPC Out.
 
 ## A.4 Converter design
 
@@ -104,7 +104,7 @@ From Phase 0 (details at the end):
 9. **Print** two renderings of the same tree: *pretty* (committed file: one select item per line, fixed indentation, LF) and *execution* (single line, minimal spaces). Every binary expression in parentheses; no trailing `;`; no comments inside execution text.
 10. **Self-check.** Re-parse the execution text with the library's PostgreSQL grammar after removing a trailing `FETCH FIRST/NEXT … ROWS ONLY` / `OFFSET … ROWS` clause and the `N` prefix of national strings (verified to parse the emitted subset). Failure means a converter bug → `E_SELF_CHECK`. Phase 2 adds a live compile check against Oracle (Task 2.2).
 11. **Safety scan** of the execution text (A.8) → `E_FORBIDDEN`.
-12. **Length.** In `openquery` mode, execution text over 8000 characters after quote doubling → `E_TOO_LONG` (largest current query is about 3.3 KB before prefixes).
+12. **Length.** In `openquery` mode, execution text over **4000** characters after quote doubling, with each placeholder counted as 100 characters and room for the run-time row cap → `E_TOO_LONG`. OPENQUERY takes 8000 *bytes*, and the text is sent as `N'…'` (2 bytes per character): confirmed live in Phase 2 (SQL Server error 103 at 7,889 characters). Largest current query: about 3,860 characters as sent.
 
 **Date and time algebra** (`d` = time-less date, `ts` = timestamp, `i` = int):
 
@@ -241,7 +241,7 @@ wp_header.start_date >= ((CURRENT_DATE - INTERVAL '6' MONTH)::date - DATE '1971-
 | 80 | `VARCHAR2` text in a non-Unicode database charset | `W_MAYBE_LOST_UNICODE` from the schema diff (charset from Phase 0b, b3) | `schemaDiff.test.ts` |
 | 81 | `float8` values | Passed through; verification compares shortest round-trip strings | `compare.test.ts` |
 | 82 | Source with lint errors | Not converted (`E_LINT`), listed as such | `cli.test.ts` |
-| 83 | Execution text length | `openquery` mode: over 8000 characters → `E_TOO_LONG`; `exec_at` has no such limit | `convert.test.ts` |
+| 83 | Execution text length | `openquery` mode: over 4000 characters (`N'…'` text; see A.4 step 12) → `E_TOO_LONG`, at convert time and again at run time with the real values; `exec_at` has no such limit | `convert.test.ts`, `relay.test.ts` |
 | 84 | Row order across the relay | `exec_at` returns Oracle's order unchanged; `openquery` keeps it in practice but not by guarantee → verification checks order | `compare.test.ts` |
 | 85 | Oracle `NUMBER` without precision as mapped by the relay | Runner formats each column by the converter's output type (int columns as whole numbers), not by the relay's type | Task 2.1 |
 
@@ -561,12 +561,12 @@ Read-only. I run the DWH ones through `scripts/dwh.ts` after you approve each (e
   - `runConverted(pool: sql.ConnectionPool, conv: ConvertResult, mapping: DwhMapping, opts: RunOptions): Promise<RunHandle>` (refuses `available === false` with `E_MISSING_IN_DWH`; streaming; `arrayRowMode`; cap 501 / `exportRowLimit`; cancels on abort or cap)
   - `formatCell(v: unknown, type: SqlType): string`, `csvHeaderBytes(): Buffer` (BOM), `csvLine(cells: string[]): string` (all quoted, CRLF)
 
-- [ ] **Step 1: Write failing tests**: `relay statement doubles quotes and uses N-strings`; `relay statement is one of the two templates`; `placeholder value is trimmed; bound in exec_at; refused if unsafe in openquery` (`" 2-VNAB-090926-CHK-STO\t"`, `O'Brien`); `empty placeholder value is refused`; `preview cap appends FETCH FIRST on 19, ROWNUM wrap on 11`; `unavailable query is refused before reaching the pool`; `empty result keeps column names`; `duplicate column names are kept by position`; `preview stops at 501 rows and cancels`; `query failing the Oracle scan never reaches the pool`; `csv has BOM and round-trips Vietnamese` (`"Kiểm tra động cơ"`); `date-typed column prints YYYY-MM-DD even though the relay returns a datetime` (with `process.env.TZ = "Asia/Ho_Chi_Minh"`); `int column from a NUMBER prints without decimals` (#85); `timestamp prints YYYY-MM-DD HH:MM:SS`; `config error names the variable but not its value`.
-- [ ] **Step 2: Run.** Expected: FAIL.
-- [ ] **Step 3: Implement.**
-- [ ] **Step 4: Run.** Expected: PASS.
-- [ ] **Step 5: Live smoke test** (read-only, with the user's OK): `npm run dwh:run -- extract_all_parts.sql`. Expected: rows and a count.
-- [ ] **Step 6: Commit** `feat(dwh): relay wrapper, read-only runner and CSV formatting`.
+- [x] **Step 1: Write failing tests**: `relay statement doubles quotes and uses N-strings`; `relay statement is one of the two templates`; `placeholder value is trimmed; bound in exec_at; refused if unsafe in openquery` (`" 2-VNAB-090926-CHK-STO\t"`, `O'Brien`); `empty placeholder value is refused`; `preview cap appends FETCH FIRST on 19, ROWNUM wrap on 11`; `unavailable query is refused before reaching the pool`; `empty result keeps column names`; `duplicate column names are kept by position`; `preview stops at 501 rows and cancels`; `query failing the Oracle scan never reaches the pool`; `csv has BOM and round-trips Vietnamese` (`"Kiểm tra động cơ"`); `date-typed column prints YYYY-MM-DD even though the relay returns a datetime` (with `process.env.TZ = "Asia/Ho_Chi_Minh"`); `int column from a NUMBER prints without decimals` (#85); `timestamp prints YYYY-MM-DD HH:MM:SS`; `config error names the variable but not its value`.
+- [x] **Step 2: Run.** Expected: FAIL.
+- [x] **Step 3: Implement.**
+- [x] **Step 4: Run.** Expected: PASS.
+- [x] **Step 5: Live smoke test** (read-only, with the user's OK): `npm run dwh:run -- extract_all_parts.sql`. Expected: rows and a count.
+- [x] **Step 6: Commit** `feat(dwh): relay wrapper, read-only runner and CSV formatting`.
 
 ### Task 2.2: Catalogue fetch, schema diff, live compile check
 
@@ -582,11 +582,11 @@ Read-only. I run the DWH ones through `scripts/dwh.ts` after you approve each (e
   - `diffSchema(cat: Catalogue, csv: CsvIndex, model: Model, used: string[], mapping: DwhMapping): SchemaIssue[]`; `renderDiffMarkdown(issues: SchemaIssue[], cat: Catalogue): string`
   - `compileAll(pool, root): Promise<{ source: string; ok: boolean; message?: string }[]>` (each available query run with zero rows: `FETCH FIRST 0 ROWS ONLY` on ≥ 12c, else `WHERE 1 = 0` wrap)
 
-- [ ] **Step 1: Write failing tests**: one per issue kind and per row of the A.6 Oracle compatibility table (fixture catalogue); `markdown is stable`; `compileAll reports an Oracle error per query without stopping`.
-- [ ] **Step 2: Run.** Expected: FAIL.
-- [ ] **Step 3: Implement**; wire `dwh:catalogue`, `dwh:schema-diff`, `dwh:compile-all`; add the diff file to `dwhCheck`.
-- [ ] **Step 4: Run** tests, then (with the user's OK) `npm run dwh:catalogue && npm run dwh:schema-diff && npm run dwh:convert && npm run dwh:compile-all`. Expected: snapshot and diff written; manifest shows real availability; every available query compiles.
-- [ ] **Step 5: Commit** `feat(dwh): catalogue snapshot, schema diff and live compile check`.
+- [x] **Step 1: Write failing tests**: one per issue kind and per row of the A.6 Oracle compatibility table (fixture catalogue); `markdown is stable`; `compileAll reports an Oracle error per query without stopping`.
+- [x] **Step 2: Run.** Expected: FAIL.
+- [x] **Step 3: Implement**; wire `dwh:catalogue`, `dwh:schema-diff`, `dwh:compile-all`; add the diff file to `dwhCheck`.
+- [x] **Step 4: Run** tests, then (with the user's OK) `npm run dwh:catalogue && npm run dwh:schema-diff && npm run dwh:convert && npm run dwh:compile-all`. Expected: snapshot and diff written; manifest shows real availability; every available query compiles.
+- [x] **Step 5: Commit** `feat(dwh): catalogue snapshot, schema diff and live compile check`.
 
 ### Task 2.3: Plain-language errors
 
@@ -597,9 +597,9 @@ Read-only. I run the DWH ones through `scripts/dwh.ts` after you approve each (e
 **Interfaces:**
 - Produces: `toPlain(err: unknown): { message: string; detail: string }` (the A.9 table; finds `ORA-\d{5}` inside relay errors; `detail` scrubbed of `DWH_SERVER`, `DWH_USER`, `DWH_PASSWORD` values)
 
-- [ ] **Step 1: Write failing tests**: one per A.9 row using fake errors (incl. a 7320 relay error wrapping ORA-00942 with the table name extracted); `detail never contains the fake env values`.
-- [ ] **Step 2–4:** Run (FAIL), implement, run (PASS).
-- [ ] **Step 5: Commit** `feat(dwh): plain-language error messages`.
+- [x] **Step 1: Write failing tests**: one per A.9 row using fake errors (incl. a 7320 relay error wrapping ORA-00942 with the table name extracted); `detail never contains the fake env values`.
+- [x] **Step 2–4:** Run (FAIL), implement, run (PASS).
+- [x] **Step 5: Commit** `feat(dwh): plain-language error messages`.
 
 ### Task 2.4: `dwh:run` CLI, expression probes, retire old scripts
 
@@ -612,10 +612,10 @@ Read-only. I run the DWH ones through `scripts/dwh.ts` after you approve each (e
 **Interfaces:**
 - Produces: `dwh:run <source.sql> [--param K=V] [--csv out.csv] [--raw <oracle.sql>]`; `dwh:probe-exprs [--pg]` (PASS/FAIL per probe; `--pg` prints the PostgreSQL versions for AMOS)
 
-- [ ] **Step 1: Write failing test** `JS reference matches every expected value in expr-probes.json` (the four month cases, minutes on a date, day differences across a year boundary, integer division, NULL ordering).
-- [ ] **Step 2–4:** Run (FAIL), implement, run (PASS).
-- [ ] **Step 5: Live run** (with the user's OK) `npm run dwh:probe-exprs`; the user runs `--pg` output in AMOS once. Expected: all three agree.
-- [ ] **Step 6: Commit** `feat(dwh): dwh:run CLI and engine expression probes`.
+- [x] **Step 1: Write failing test** `JS reference matches every expected value in expr-probes.json` (the four month cases, minutes on a date, day differences across a year boundary, integer division, NULL ordering).
+- [x] **Step 2–4:** Run (FAIL), implement, run (PASS).
+- [x] **Step 5: Live run** (with the user's OK) `npm run dwh:probe-exprs`; the user runs `--pg` output in AMOS once. Expected: all three agree.
+- [x] **Step 6: Commit** `feat(dwh): dwh:run CLI and engine expression probes`.
 
 **Phase 2 test plan:** unit tests with fakes; live read-only smoke runs; compile check over every available query; expression probes on both engines. Exit: any available converted query runs from the command line into a CSV that opens correctly in Excel.
 
@@ -731,7 +731,7 @@ Decisions I made that you may want to override: output names keep the source spe
 | R15 | Host PC asleep or off | High / low | Autostart; power setting in the guide |
 | R16 | Firewall/certificate need IT | Medium / medium | One `netsh` command for IT; self-signed fallback; unshared mode meanwhile |
 | R17 | One person's huge export slows everyone | Medium / low | One query per visitor, four in total, timeouts, row limit |
-| R18 | `openquery` mode limits (8000 chars, no parameters, duplicate names) | Present / medium | Real today (RPC Out off, b1/b7): `openquery` is the mode; `E_TOO_LONG`, strict values, `E_DUPLICATE_OUTPUT`; ask for RPC Out |
+| R18 | `openquery` mode limits (4000 characters as `N'…'`, no parameters, duplicate names) | Present / medium | Real today (RPC Out off, b1/b7): `openquery` is the mode; `E_TOO_LONG`, strict values, `E_DUPLICATE_OUTPUT`; ask for RPC Out |
 
 ---
 
@@ -812,3 +812,29 @@ All runs returned the same 50 rows (19 columns, items 1.1.1, 1.1.2, 2.1.1, …).
   - **(c) Loosen the limit** (for example "under 30 s warm") and proceed with everything. I don't recommend it without knowing how people will use the page.
 
 **C4. The six missing tables are still missing** (`wp_status`, `wp_department_link`, `cml_reference`, `oem_doc_partno`, `taskcard_coversheet_info`, `time_captured_history`). Unchanged from Phase 0; Part C's request to the administrator now has three items: the six tables, RPC Out, and the speed/truncation questions above.
+
+---
+
+# Phase 2 findings (2026-11-17)
+
+All live steps were read-only `SELECT`s, each approved by you, run through the new commands (`dwh:run`, `dwh:catalogue`, `dwh:probe-exprs`). The deferred Phase 1 review items were fixed first (`3ec9591`); Phase 2 was reviewed by a fresh reviewer and its Important findings fixed with tests (`e55b178`).
+
+| Step | Result | Effect |
+|---|---|---|
+| 2.1 step 5: `dwh:run -- extract_all_parts.sql` | Refused by Oracle: `ORA-00904: "PART"."MANUAL_TARGET_STOCK": invalid identifier`, shown as the plain message "The DWH has no column called PART.MANUAL_TARGET_STOCK…" | The plain-error path works live (the ORA text arrives as an informational relay message, a review fix). The query itself cannot run in the DWH as written. |
+| 2.2 step 4: `dwh:catalogue` | 1,999 columns in 59 tables (same as Phase 0b, b8), committed as `dwh/catalogue.json` | Availability is now exact (tables and columns). |
+| 2.2 step 4: `dwh:schema-diff` / `dwh:convert` | 17 errors, 8 warnings, 6 notes (`docs/generated/dwh-schema-diff.md`) | See below. **No repo query is available in the DWH as written**: 23 convert, all need a missing table or column; 4 are refused (2 duplicate names in openquery mode, 2 lint errors). |
+| 2.2 step 4: `dwh:compile-all` | Not run: no query is available, so there is nothing to compile | Run it once a query is available (after a workaround). |
+| 2.4 step 5: `dwh:probe-exprs` | **24 of 24 PASS** (month clamping, minutes on a date, hour chains, `::date`, day differences, integer division and modulo with negatives, `EXTRACT`, NULL ordering) | The converter's date and number rules give AMOS's answers on the real Oracle engine. You may still run `npm run dwh:probe-exprs -- --pg` in AMOS once. |
+| Review follow-up: 7,889-character `N'…'` text through `OPENQUERY` | SQL Server error 103: "… is too long. Maximum length is 8000." | The limit is 8000 **bytes**, i.e. **4000 characters** for the `N'…'` text. `OPENQUERY_MAX_LENGTH` is now 4000 (A.4 step 12, #83); the longest current query is about 3,860 characters as sent, so nothing is refused today. |
+
+**New schema facts from the catalogue** (beyond the six missing tables):
+- `PART.MANUAL_TARGET_STOCK` and `PART.TARGET_STOCK` do not exist in the DWH (blocks `extract_all_parts.sql` and `extract_parts_standalone_no_cml_no_alternate.sql`).
+- `PART.ALERT_QTY`, `MAX_PURCH`, `MIN_SAFETY_STOCK`, `REORD_LEVEL`, `SAFETY_STOCK`, `WEIGHT` and `PART_REQUEST_2.QTY` are numbers (`float8`) in AMOS but `VARCHAR2` text in the DWH (`retyped`): selecting them works with a warning; computing with them is refused.
+- `WORK_TEMPLATE` and `WP_HISTORY` (described in `schema/`, not used by repo queries) are also missing.
+- `WP_HEADER.WPNO` is `VARCHAR2(50)` in the DWH; AMOS allows 70 characters (`truncation_risk`). Long text columns are `VARCHAR2(1000–4000)` (`truncation_risk`, as known from b8).
+
+**Open, for you to decide:**
+1. Workarounds per query for the missing tables and columns (Part C, item 1), now with the exact list from the diff.
+2. `scripts/dwh.ts` and `scripts/example_steps.sql` were not deleted (untracked; your call).
+3. The deferred review minors are listed in the session summary and in the executor's ledger.
