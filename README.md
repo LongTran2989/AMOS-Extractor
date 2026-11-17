@@ -21,6 +21,7 @@ Here is a quick tour of the important files and folders:
 - **`src/`**: The TypeScript source code for the custom CLI tools (Schema Loader, SQL Validator, and Docs Generator).
 - **`docs/`**: Documentation folder. 
   - `docs/generated/schema.md` is automatically generated and contains the full schema documentation and Entity Relationship Diagram (ERD).
+- **`queries/wp_seqs/`**: generated steps/parts queries per station-department pair (`npm run scaffold`); see `docs/wp-seqs-split-extraction.md`.
 - **`*.sql`**: SQL query files (like `extract_work_order.sql`) living in the root directory. These are the actual queries used to pull data out of AMOS.
 - **`Database-Description-AMOS-csv.csv`**: A massive raw export of the physical AMOS database schema. Our CLI uses this to verify that columns actually exist in the physical database.
 

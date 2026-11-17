@@ -13,6 +13,8 @@
     "validate": "node src/cli.ts validate",
     "docs": "node src/cli.ts docs",
     "docs:check": "node src/cli.ts docs --check",
+    "stitch": "node src/cli.ts stitch",
+    "stitch:compare": "node src/cli.ts stitch:compare",
     "scaffold": "node src/cli.ts scaffold",
     "check": "npm run typecheck && npm test && npm run validate && npm run docs:check"
   },

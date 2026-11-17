@@ -1,0 +1,294 @@
+{
+  "query_file": "extract_wp_seqs_parameterized.sql",
+  "explanation_format": "<repo discoveries and context> | <vendor description from Database-Description-AMOS-csv.csv>",
+  "grain": "One row per (WP x department x sequence item x workstep x part request). WP header values repeat on every row. LEFT JOINs mean an item with no worksteps (or a step with no parts) still returns one row with NULLs in the missing columns.",
+  "sources": {
+    "repo": [
+      "SESSION_CONTEXT.md (Key Technical Insights and Querying Rules)",
+      "schema/workpack.yaml",
+      "schema/wp_item.yaml",
+      "schema/workorder.yaml",
+      "schema/workstep.yaml",
+      "schema/part_request.yaml",
+      "schema/_conventions.yaml"
+    ],
+    "csv": "Database-Description-AMOS-csv.csv"
+  },
+  "encodings": {
+    "date_int": "Integer days since 1971-12-31. Convert in code (never in SQL output).",
+    "time_minutes": "Integer minutes since midnight (CSV type TIME).",
+    "bool_yn": "'Y' / 'N' text flag; anything else is treated as false."
+  },
+  "columns": [
+    {
+      "output_name": "z_WP_ID",
+      "source": "wp_header.wpno_i",
+      "alias_status": "approved (wp_id)",
+      "trust": "probed",
+      "amos_type": "WP",
+      "pg_type": "int4",
+      "keys": ["P"],
+      "group": "WP Properties",
+      "explanation": "Internal unique key of the workpack and the grouping key in code, because the WP row repeats once per department, item, step and part (1:N joins). | Internal unique-key of the Workpackage (counted with parameter 25)"
+    },
+    {
+      "output_name": "z_WP_NO",
+      "source": "wp_header.wpno",
+      "alias_status": "approved (wp_no)",
+      "trust": "probed",
+      "amos_type": "ALPHANUM",
+      "pg_type": "varchar(70)",
+      "keys": ["U"],
+      "group": "WP Properties",
+      "explanation": "Human-readable workpack name, unique per WP. Also the first ORDER BY column of this query. | Name of the Workpackage"
+    },
+    {
+      "output_name": "z_WP_DESC",
+      "source": "wp_header.description",
+      "alias_status": "approved (wp_desc)",
+      "trust": "probed",
+      "amos_type": "ALPHANUM",
+      "pg_type": "varchar(100)",
+      "keys": [],
+      "group": "WP Properties",
+      "explanation": "Free-text description of the WP. Repeats on every row of the WP. | Description of the Workpackage"
+    },
+    {
+      "output_name": "z_WP_STATION",
+      "source": "wp_header.station",
+      "alias_status": "approved (wp_station)",
+      "trust": "probed",
+      "amos_type": "STA",
+      "pg_type": "varchar(4)",
+      "keys": [],
+      "group": "WP Properties",
+      "explanation": "Station where the work is planned (e.g. HAN). Filter column of this query (currently hardcoded to 'HAN'; it is meant to be a parameter). | Station for that the work is planned"
+    },
+    {
+      "output_name": "z_AC_REG",
+      "source": "wp_header.ac_registr",
+      "alias_status": "approved (ac_reg, grandfathered name)",
+      "trust": "probed",
+      "amos_type": "AC",
+      "pg_type": "varchar(6)",
+      "keys": ["I"],
+      "group": "WP Properties",
+      "explanation": "Aircraft registration of the WP. The query header says it is parameterized by ac_registr, but the WHERE clause does not filter on it yet. | Aircraft-Registry of the affected A/C"
+    },
+    {
+      "output_name": "z_WP_DEPT",
+      "source": "wp_department_link.department",
+      "alias_status": "approved (wp_dept)",
+      "trust": "probed",
+      "amos_type": "DEP",
+      "pg_type": "varchar(8)",
+      "keys": ["U", "I"],
+      "group": "WP Properties",
+      "explanation": "Department responsible for / handed the WP. Multi-valued: a WP can have several departments and the join repeats the WP row once per department (group by z_WP_ID in code). Filtered to 'NTHN' in this query, so only that department's rows come back. | Department code responsible for the WP. Foreign key to the department table."
+    },
+    {
+      "output_name": "z_WP_STATUS_NAME",
+      "source": "wp_status.name",
+      "alias_status": "approved (wp_status_name)",
+      "trust": "documented",
+      "amos_type": "ALPHANUM",
+      "pg_type": "varchar(50)",
+      "keys": ["U"],
+      "group": "WP Properties",
+      "explanation": "Present-day (real-time) status of the WP via wp_header.wp_status, a N:1 lookup to wp_status. The query filters on 'In Progress', 'Issued' and 'Closed'. Do NOT use it to reconstruct historical activity; use the date columns instead. | Name of the Workpackage status"
+    },
+    {
+      "output_name": "closed",
+      "source": "wp_status.closed",
+      "alias_status": "none yet (proposed name: wp_status_closed). Selected as the raw column name, so the CSV header is 'closed'.",
+      "trust": "documented",
+      "amos_type": "BOOL",
+      "pg_type": "varchar(1)",
+      "keys": [],
+      "group": "WP Properties",
+      "encoding": "bool_yn",
+      "explanation": "Whether the status counts as closed (Y/N). Decode to boolean in code. The query's own filter uses the status name ('Closed'), not this flag. | Indicates whether the status is considered closed ('Y' for yes, 'N' for no)"
+    },
+    {
+      "output_name": "z_WP_START_DATE",
+      "source": "wp_header.start_date",
+      "alias_status": "approved (wp_start_date)",
+      "trust": "documented",
+      "amos_type": "DATE",
+      "pg_type": "int4",
+      "keys": ["I", "I"],
+      "group": "WP Properties",
+      "encoding": "date_int",
+      "explanation": "Scheduled start date as an AMOS integer. Used by Condition 1 (In Progress / Issued WPs that started within the last 6 months): DATE '1971-12-31' + start_date. | Scheduled start date as number of days since 31.Dec.1971"
+    },
+    {
+      "output_name": "z_WP_START_TIME",
+      "source": "wp_header.start_time",
+      "alias_status": "approved (wp_start_time)",
+      "trust": "documented",
+      "amos_type": "TIME",
+      "pg_type": "int4",
+      "keys": [],
+      "group": "WP Properties",
+      "encoding": "time_minutes",
+      "explanation": "Scheduled start time as minutes since midnight (a TIME column, not milliseconds). Combine with z_WP_START_DATE in code to get a real timestamp (derived field wp_start). | Scheduled Start-Time in minutes since day begin"
+    },
+    {
+      "output_name": "z_WP_ACT_END_DATE",
+      "source": "wp_header.act_end_date",
+      "alias_status": "approved (wp_act_end_date)",
+      "trust": "documented",
+      "amos_type": "DATE",
+      "pg_type": "int4",
+      "keys": ["I"],
+      "group": "WP Properties",
+      "encoding": "date_int",
+      "explanation": "WARNING: when a WP is closed, AMOS does not populate act_end_date / act_end_time, only wp_header.end_date. Expect NULL here, including for Closed WPs. The query's closed-WP filter uses wp_header.end_date / end_time, which are not selected. | Real end-date"
+    },
+    {
+      "output_name": "z_WP_ACT_END_TIME",
+      "source": "wp_header.act_end_time",
+      "alias_status": "approved (wp_act_end_time)",
+      "trust": "documented",
+      "amos_type": "TIME",
+      "pg_type": "int4",
+      "keys": [],
+      "group": "WP Properties",
+      "encoding": "time_minutes",
+      "explanation": "Same caveat as z_WP_ACT_END_DATE: usually NULL for closed WPs. Minutes since midnight when present. | Real end-time"
+    },
+    {
+      "output_name": "z_WP_SEQ_1ST",
+      "source": "wp_sequence.seqno_prefix_i",
+      "alias_status": "approved (wp_seq_1st, grandfathered name)",
+      "trust": "probed",
+      "amos_type": "INT",
+      "pg_type": "int4",
+      "keys": ["U", "I"],
+      "group": "Sequence Properties",
+      "explanation": "1st level of the WP item number (item '3.23' has 1st = 3). Together with z_WP_SEQ_2ND it identifies the WP item; wp_sequence links the WP to every event in wo_header (work orders, templates, pendings, jobcards, etc.). | Prefix for the sequence number, corresponding to the event type or check. For example, if the sequence number is '3.342', this column contains '3'."
+    },
+    {
+      "output_name": "z_WP_SEQ_2ND",
+      "source": "wp_sequence.seqno",
+      "alias_status": "approved (wp_seq_2nd, grandfathered name)",
+      "trust": "probed",
+      "amos_type": "INT",
+      "pg_type": "int4",
+      "keys": ["U", "I"],
+      "group": "Sequence Properties",
+      "explanation": "2nd level of the WP item number (item '3.23' has 2nd = 23). Watch for negative values: they mark duplicate sequences, so check before treating (1st, 2nd) as a unique key. | The sequence number, starting at 1 for each WP. A negative value indicates a duplicate sequence; the original value is stored in the deprecated old_seqno_i column."
+    },
+    {
+      "output_name": "z_WORKSTEP_NO",
+      "source": "workstep_link.sequenceno",
+      "alias_status": "approved (workstep_no, grandfathered name)",
+      "trust": "probed",
+      "amos_type": "INT",
+      "pg_type": "int4",
+      "keys": ["U", "I"],
+      "group": "Sequence Properties",
+      "explanation": "3rd level of the sequence: orders the worksteps inside one WP item (item 3.23, step 1, step 2, ...). NULL when the item has no worksteps (LEFT JOIN). It is the last ORDER BY column. | Step's position in the sequence of steps within the Work Template."
+    },
+    {
+      "output_name": "z_WP_IT_STS",
+      "source": "wo_header.state",
+      "alias_status": "approved (wp_it_sts, grandfathered name)",
+      "trust": "probed",
+      "amos_type": "ALPHANUM",
+      "pg_type": "varchar(2)",
+      "keys": ["I", "I", "I"],
+      "group": "Sequence Properties",
+      "explanation": "Status of the WP item's underlying wo_header record (O = Open, C = Closed). wo_header is a universal container (work orders, work templates, event pendings, jobcards, shopcards), so this also applies to non-WO items. | State of a WO: O = Open WO C = Closed WO"
+    },
+    {
+      "output_name": "z_WP_IT_NAME",
+      "source": "wo_event_link.event_name",
+      "alias_status": "approved (wp_it_name)",
+      "trust": "probed",
+      "amos_type": "ALPHANUM",
+      "pg_type": "varchar(100)",
+      "keys": [],
+      "group": "PROBE: Finding the Title",
+      "explanation": "Title/name of the WP item, found by probing. Use wo_event_link (1:1 with wo_header), NOT wp_history, which is an append-only log and multiplies rows (1:N). | Name of the Maintenance Event. It will be used to globally improve the performance of the Maintenance Event framework without using the associated Maintenance Requirements."
+    },
+    {
+      "output_name": "z_WP_IT_NAME_1",
+      "source": "wo_event_link.event_display",
+      "alias_status": "approved (wp_it_name_1)",
+      "trust": "probed",
+      "amos_type": "ALPHANUM",
+      "pg_type": "varchar(300)",
+      "keys": [],
+      "group": "PROBE: Finding the Title",
+      "explanation": "Longer display variant of the item title (up to 300 characters vs 100 for event_name). Compare against z_WP_IT_NAME to see which one holds the title you want. | Display of the Maintenance Event. It will be used to globally improve the performance of the Maintenance Event framework without using the associated Maintenance Requirements."
+    },
+    {
+      "output_name": "z_WP_IT_HEADER",
+      "source": "wo_text_description.header",
+      "alias_status": "approved (wp_it_header)",
+      "trust": "probed",
+      "amos_type": "ALPHANUM",
+      "pg_type": "varchar(70)",
+      "keys": [],
+      "group": "Validated Step Text",
+      "explanation": "Step title / summary. Always select header, text and text_html together to get the full step text, because only one of text / text_html is filled. NULL when the item has no steps. | Header description of the work step."
+    },
+    {
+      "output_name": "z_WP_IT_TEXT",
+      "source": "wo_text_description.text",
+      "alias_status": "approved (wp_it_text)",
+      "trust": "probed",
+      "amos_type": "ALPHANUM",
+      "pg_type": "text(2147483647)",
+      "keys": [],
+      "group": "Validated Step Text",
+      "explanation": "Plain-text step body. Only populated when the step was saved as plain text; formatted steps leave it NULL and use z_WP_IT_TEXT_HTML. Can contain newlines and commas, so use proper CSV quoting. | Plain description or work step text. This field is only populated if the text was saved as plain text; otherwise, it is empty (NULL)."
+    },
+    {
+      "output_name": "z_WP_IT_TEXT_HTML",
+      "source": "wo_text_description.text_html",
+      "alias_status": "approved (wp_it_text_html)",
+      "trust": "probed",
+      "amos_type": "HTML",
+      "pg_type": "text(2147483647)",
+      "keys": [],
+      "group": "Validated Step Text",
+      "explanation": "Formatted (HTML) step body. This is where formatted step descriptions are stored; NULL for plain-text steps. Can be very large; strip or sanitize the HTML in code. | Formatted description or work step text. This field is only populated if the text was saved as formatted; otherwise, it is empty (NULL)."
+    },
+    {
+      "output_name": "z_PART_NO",
+      "source": "part_request_2.partno",
+      "alias_status": "approved (part_no)",
+      "trust": "probed",
+      "amos_type": "PA",
+      "pg_type": "varchar(32)",
+      "keys": ["I", "I", "I"],
+      "group": "Required Materials",
+      "explanation": "Part number required to perform the step (down to workstep level). Joined by part_request_2.event_key = workstep_link.workstep_linkno_i AND event_type = 'WSL'. A step with N part requests returns N rows (the step text repeats); NULL when the step needs no parts. | The requested P/N."
+    },
+    {
+      "output_name": "z_PART_QTY",
+      "source": "part_request_2.qty",
+      "alias_status": "approved (part_qty)",
+      "trust": "probed",
+      "amos_type": "DOUBLE",
+      "pg_type": "float8",
+      "keys": [],
+      "group": "Required Materials",
+      "explanation": "Required quantity of z_PART_NO for that workstep. Floating point (float8), so it may be fractional. The related percentage column (qty reduced after each use) is not selected. | The requested quantity of the part."
+    },
+    {
+      "output_name": "z_PART_NO_PCF",
+      "source": "part_request_2.no_pcf",
+      "alias_status": "approved (part_no_pcf)",
+      "trust": "probed",
+      "amos_type": "BOOL",
+      "pg_type": "varchar(1)",
+      "keys": ["I"],
+      "group": "Required Materials",
+      "encoding": "bool_yn",
+      "explanation": "Y = the part number is not in the forecast and needs attention (flag these in validation). | 'Y' if the part request must not appear in the Parts Consumption Forecast."
+    }
+  ]
+}

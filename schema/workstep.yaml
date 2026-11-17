@@ -19,8 +19,10 @@ tables:
       - { from: wo_text_action.workstep_linkno_i, to: workstep_link.workstep_linkno_i, type: left, cardinality: "N:1", trust: probed }
 fields:
   - column: workstep_link.workstep_linkno_i
-    name_status: unnamed
+    name_status: approved
+    name: workstep_link_id
     trust: documented
+    note: "Unique workstep key; used to stitch part requests (part_request_2.event_key, event_type 'WSL') back onto steps"
   - column: workstep_link.descno_i
     name_status: unnamed
     trust: documented
