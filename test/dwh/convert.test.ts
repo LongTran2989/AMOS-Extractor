@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import * as path from "node:path";
 import { loadModel } from "../../src/schema/load.ts";
 import { loadCatalogue } from "../../src/dwh/catalogue.ts";
-import { convertQuery, CONVERTER_VERSION, type ConvertOptions } from "../../src/dwh/convert/index.ts";
+import { convertQuery, CONVERTER_VERSION, OPENQUERY_MAX_LENGTH, RUN_CAP_RESERVE, type ConvertOptions } from "../../src/dwh/convert/index.ts";
 import { assertReadOnlyOracle } from "../../src/dwh/safety.ts";
 import { ConvertError } from "../../src/dwh/convert/errors.ts";
 import { MAPPING, ROOT, csvIndex, realSources, readSource, rejects } from "./helpers.ts";
@@ -44,7 +44,7 @@ test("every real query converts in exec_at mode (except the two probes, which fa
     const r = convertQuery(readSource(f), f, execAt);
     assert.doesNotThrow(() => assertReadOnlyOracle(r.exec), f);
     assert.ok(!r.exec.includes("\n"), f);
-    assert.ok(r.exec.length < 8000, f);
+    assert.ok(r.exec.length < OPENQUERY_MAX_LENGTH, f);
   }
 });
 
@@ -79,26 +79,36 @@ test("a read-only scan failure throws E_FORBIDDEN (broken printer injected)", ()
   assert.equal(f.code, "E_FORBIDDEN");
 });
 
-test("#83 E_TOO_LONG counts each placeholder as its longest (100-character) value", () => {
-  // About 7,900 characters with '<P>' written as-is, but over 8000 once <P> holds 100 characters.
-  const list = Array.from({ length: 712 }, (_, i) => `'W${String(i).padStart(4, "0")}'`).join(", ");
-  const sql = `SELECT wp_header.wpno_i AS z_WP_ID FROM wp_header WHERE wp_header.station = '<P>' AND wp_header.wpno IN (${list})`;
-  const asIs = convertQuery(sql, "t.sql", { ...opts, mapping: { ...MAPPING, execMode: "exec_at" } }).exec.replace(/'/g, "''").length;
-  assert.ok(asIs <= 8000 && asIs + 97 > 8000, `length ${asIs}`);
-  assert.equal(rejects(() => convertQuery(sql, "t.sql", opts)).code, "E_TOO_LONG");
+/** Sent length (quotes doubled) of a converted IN-list query with n items, in exec_at mode (no length check). */
+const listQuery = (n: number, extra = "") =>
+  `SELECT wp_header.wpno_i AS z_WP_ID FROM wp_header WHERE ${extra}wp_header.wpno IN (${Array.from({ length: n }, (_, i) => `'W${String(i).padStart(4, "0")}'`).join(", ")})`;
+const sentLength = (sql: string) => convertQuery(sql, "t.sql", { ...opts, mapping: { ...MAPPING, execMode: "exec_at" } }).exec.replace(/'/g, "''").length;
+/** Smallest n whose sent length (plus `reserve`) is over the limit. */
+const firstOver = (reserve: number, extra = "") => {
+  let n = 1;
+  while (sentLength(listQuery(n, extra)) + reserve <= OPENQUERY_MAX_LENGTH) n++;
+  return n;
+};
+
+test("#83 the OPENQUERY limit is 4000 characters (N'…' text, SQL Server error 103 in the b6 follow-up)", () => {
+  assert.equal(OPENQUERY_MAX_LENGTH, 4000);
 });
 
-test("#83 openquery mode: exec text over 8000 chars after quote doubling throws E_TOO_LONG; exec_at has no limit", () => {
-  const list = Array.from({ length: 900 }, (_, i) => `'W${String(i).padStart(4, "0")}'`).join(", ");
-  const sql = `SELECT wp_header.wpno_i AS z_WP_ID FROM wp_header WHERE wp_header.wpno IN (${list})`;
-  const e = rejects(() => convertQuery(sql, "t.sql", opts));
-  assert.equal(e.code, "E_TOO_LONG");
-  assert.ok(convertQuery(sql, "t.sql", { ...opts, mapping: { ...MAPPING, execMode: "exec_at" } }).exec.length > 8000);
-  // Under 8000 characters before doubling, over after: still too long.
-  const near = Array.from({ length: 800 }, (_, i) => `'W${String(i).padStart(4, "0")}'`).join(", ");
-  const r = convertQuery(`SELECT wp_header.wpno_i AS z_WP_ID FROM wp_header WHERE wp_header.wpno IN (${near})`, "t.sql", { ...opts, mapping: { ...MAPPING, execMode: "exec_at" } });
-  assert.ok(r.exec.length < 8000 && r.exec.replace(/'/g, "''").length > 8000, `length ${r.exec.length}`);
-  assert.equal(rejects(() => convertQuery(`SELECT wp_header.wpno_i AS z_WP_ID FROM wp_header WHERE wp_header.wpno IN (${near})`, "t.sql", opts)).code, "E_TOO_LONG");
+test("#83 openquery mode: text over the limit after quote doubling and the run-time row cap throws E_TOO_LONG; exec_at has no limit", () => {
+  const n = firstOver(RUN_CAP_RESERVE);
+  assert.doesNotThrow(() => convertQuery(listQuery(n - 1), "t.sql", opts));
+  assert.equal(rejects(() => convertQuery(listQuery(n), "t.sql", opts)).code, "E_TOO_LONG");
+  // Within the limit as written, over it once the runner adds its FETCH FIRST cap: refused now, not at every run.
+  assert.ok(sentLength(listQuery(n)) <= OPENQUERY_MAX_LENGTH, "refused only because of the cap the runner adds");
+  assert.ok(convertQuery(listQuery(3 * n), "t.sql", { ...opts, mapping: { ...MAPPING, execMode: "exec_at" } }).exec.length > OPENQUERY_MAX_LENGTH);
+});
+
+test("#83 E_TOO_LONG counts each placeholder as its longest (100-character) value", () => {
+  const extra = "wp_header.station = '<P>' AND ";
+  const n = firstOver(RUN_CAP_RESERVE + 97, extra);
+  assert.ok(sentLength(listQuery(n, extra)) + RUN_CAP_RESERVE <= OPENQUERY_MAX_LENGTH, "fits with <P> as written");
+  assert.equal(rejects(() => convertQuery(listQuery(n, extra), "t.sql", opts)).code, "E_TOO_LONG");
+  assert.doesNotThrow(() => convertQuery(listQuery(n - 1, extra), "t.sql", opts));
 });
 
 test("#28 / #29 number casts go through the whole pipeline (self-check included)", () => {

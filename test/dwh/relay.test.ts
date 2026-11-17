@@ -51,14 +51,14 @@ test("a placeholder used twice gets two bound parameters in exec_at", () => {
   assert.equal(at.inputs.length, 2);
 });
 
-test("openquery text over 8000 characters with the real values is refused (E_TOO_LONG)", () => {
-  // 7,990 characters once quotes are doubled with a 1-character value; over 8000 with 100 characters.
+test("openquery text over 4000 characters with the real values is refused (E_TOO_LONG)", () => {
+  // 3,990 characters once quotes are doubled with a 1-character value; over 4000 with 100 characters.
   const head = "SELECT X.A FROM STG_AMOS.X WHERE (X.B = '<W>') OR X.C IN (";
-  const filler = "'W', ".repeat(Math.floor((7990 - 4 - (head.length + 1)) / 7));
+  const filler = "'W', ".repeat(Math.floor((3990 - 4 - (head.length + 1)) / 7));
   const exec = `${head}${filler}'W')`;
   const inner = (t: string) => OQ.exec(t)![1]!.length;
   const fits = inner(buildRelayStatement(exec, "openquery", [P("W", "A")], "DWH_DB").tsql);
-  assert.ok(fits <= 8000 && fits + 99 > 8000, `length ${fits}`);
+  assert.ok(fits <= 4000 && fits + 99 > 4000, `length ${fits}`);
   assert.equal(rejects(() => buildRelayStatement(exec, "openquery", [P("W", "A".repeat(100))], "DWH_DB")).code, "E_TOO_LONG");
   assert.ok(buildRelayStatement(exec, "exec_at", [P("W", "A".repeat(100))], "DWH_DB"));
 });

@@ -7,6 +7,9 @@ import { dwhRun, parseRunArgs } from "../../src/dwh/runCli.ts";
 import { ROOT } from "./helpers.ts";
 import { fakePool, neverPool, scriptedPool } from "./fakePool.ts";
 
+/** As if dwh:catalogue had not run (extract_all_parts.sql is then runnable). */
+const NO_CAT = path.join(ROOT, "no-such-catalogue.json");
+
 const io = () => {
   const lines: string[] = [];
   return { lines, log: (s: string) => lines.push(s) };
@@ -33,7 +36,7 @@ test("--csv writes UTF-8 with BOM, quoted fields, CRLF and values formatted by t
     const csv = path.join(dir, "out.csv");
     const pool = fakePool(["PARTNO", "DESCRIPTION"], [["P-1", "Kiểm tra động cơ"], ["P-2", null]]);
     const out = io();
-    assert.equal(await dwhRun(pool, ROOT, ["extract_all_parts.sql", "--csv", csv], out.log), 0, out.lines.join("\n"));
+    assert.equal(await dwhRun(pool, ROOT, ["extract_all_parts.sql", "--csv", csv], out.log, { cataloguePath: NO_CAT }), 0, out.lines.join("\n"));
     const bytes = readFileSync(csv);
     assert.deepEqual([...bytes.subarray(0, 3)], [0xef, 0xbb, 0xbf]);
     const text = bytes.subarray(3).toString("utf8");
@@ -54,7 +57,7 @@ test("a failure during a CSV download marks the file incomplete", async () => {
     let calls = 0;
     const pool = scriptedPool(() => (calls++ === 0 ? { columns: ["PARTNO"], rows: [["P-1"]], fail: new Error("ORA-03113: end-of-file on communication channel"), failAfterRows: true } : { columns: [], rows: [] }));
     const out = io();
-    assert.equal(await dwhRun(pool, ROOT, ["extract_all_parts.sql", "--csv", csv], out.log), 1);
+    assert.equal(await dwhRun(pool, ROOT, ["extract_all_parts.sql", "--csv", csv], out.log, { cataloguePath: NO_CAT }), 1);
     const text = readFileSync(csv, "utf8");
     assert.match(text.trimEnd().split("\r\n").pop()!, /INCOMPLETE/);
     assert.match(out.lines.join("\n"), /link to the Oracle database failed/);
@@ -105,7 +108,7 @@ test("the CSV is written under a .part name until the download has finished", as
         return r;
       },
     };
-    assert.equal(await dwhRun(pool, ROOT, ["extract_all_parts.sql", "--csv", csv], io().log), 0);
+    assert.equal(await dwhRun(pool, ROOT, ["extract_all_parts.sql", "--csv", csv], io().log, { cataloguePath: NO_CAT }), 0);
     assert.deepEqual(seen, [[false, true]]);
     assert.ok(existsSync(csv) && !existsSync(`${csv}.part`));
   } finally {
@@ -120,7 +123,7 @@ test("an export that reaches the row limit ends with an INCOMPLETE line", async 
     const { loadMapping } = await import("../../src/dwh/mapping.ts");
     const mapping = { ...loadMapping(path.join(ROOT, "dwh", "mapping.yaml")), exportRowLimit: 3 };
     const pool = fakePool(["PARTNO"], Array.from({ length: 10 }, (_, i) => [`P-${i}`]));
-    assert.equal(await dwhRun(pool, ROOT, ["extract_all_parts.sql", "--csv", csv], io().log, { mapping }), 0);
+    assert.equal(await dwhRun(pool, ROOT, ["extract_all_parts.sql", "--csv", csv], io().log, { mapping, cataloguePath: NO_CAT }), 0);
     const lines = readFileSync(csv, "utf8").trimEnd().split("\r\n");
     assert.equal(lines.length, 5);
     assert.match(lines[4]!, /INCOMPLETE: .*row limit/);

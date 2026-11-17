@@ -60,11 +60,11 @@ function fileText(source: string, sourceSha: string, catalogueSha: string | unde
 }
 
 /** Converts one listed source the same way dwh:convert does (throws ConvertError). */
-export function convertSource(root: string, source: string): ConvertResult {
+export function convertSource(root: string, source: string, opts: { cataloguePath?: string } = {}): ConvertResult {
   const model = loadModel(path.join(root, "schema"));
   const csv = loadCsvIndex(path.join(root, "Database-Description-AMOS-csv.csv"));
   const mapping = loadMapping(path.join(root, "dwh", "mapping.yaml"));
-  const catalogue = loadCatalogue(path.join(root, "dwh", "catalogue.json"));
+  const catalogue = loadCatalogue(opts.cataloguePath ?? path.join(root, "dwh", "catalogue.json"));
   const text = lf(readFileSync(path.join(root, source), "utf8"));
   return convertQuery(text, source, { model, csv, mapping, ...(catalogue ? { catalogue } : {}) });
 }

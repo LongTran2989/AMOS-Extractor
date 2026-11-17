@@ -76,7 +76,7 @@ export async function dwhRun(
   root: string,
   args: string[],
   log: (s: string) => void,
-  opts: { signal?: AbortSignal; mapping?: DwhMapping } = {},
+  opts: { signal?: AbortSignal; mapping?: DwhMapping; cataloguePath?: string } = {},
 ): Promise<number> {
   let parsed: RunArgs;
   try {
@@ -107,7 +107,7 @@ export async function dwhRun(
         log(`${parsed.source} is not one of the repo queries (root *.sql or queries/wp_seqs/*.sql).`);
         return 1;
       }
-      conv = convertSource(root, source);
+      conv = convertSource(root, source, opts.cataloguePath ? { cataloguePath: opts.cataloguePath } : {});
       for (const w of conv.warnings) log(`Note ${w.code}: ${w.plain}`);
     }
     const mapping = opts.mapping ?? loadMapping(path.join(root, "dwh", "mapping.yaml"));

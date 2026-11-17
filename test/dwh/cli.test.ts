@@ -7,6 +7,8 @@ import { listSources, generateAll, dwhConvert, dwhCheck } from "../../src/dwh/so
 import { ROOT, realSources } from "./helpers.ts";
 
 const FIXTURE = path.join(ROOT, "test", "dwh", "fixtures", "catalogue.min.json");
+/** A catalogue path that does not exist: the repo as it is before dwh:catalogue has run. */
+const NO_CAT = { cataloguePath: path.join(ROOT, "no-such-catalogue.json") };
 const manifestOf = (files: Map<string, string>) => JSON.parse(files.get("queries/dwh/_manifest.json")!);
 const entry = (m: any, src: string) => m.sources.find((s: any) => s.source === src);
 
@@ -38,7 +40,7 @@ test("generateAll is stable across runs", () => {
 });
 
 test("manifest lists the two probe files as refused with E_LINT", () => {
-  const m = manifestOf(generateAll(ROOT));
+  const m = manifestOf(generateAll(ROOT, NO_CAT));
   for (const p of ["probe_closed_dates.sql", "probe_workstep_duplicates.sql"]) {
     assert.equal(entry(m, p).status, "refused", p);
     assert.equal(entry(m, p).code, "E_LINT", p);
@@ -57,7 +59,7 @@ test("manifest marks extract_wp_seqs_steps as converted but not available, missi
   assert.deepEqual(e.missing, ["WP_DEPARTMENT_LINK", "WP_STATUS"]);
   assert.equal(entry(m, "extract_all_parts.sql").available, true);
   // Without a snapshot, the missing tables recorded in dwh/mapping.yaml are used; columns stay unchecked.
-  const noCat = manifestOf(generateAll(ROOT));
+  const noCat = manifestOf(generateAll(ROOT, NO_CAT));
   assert.equal(entry(noCat, "extract_wp_seqs_steps.sql").available, false);
   assert.deepEqual(entry(noCat, "extract_wp_seqs_steps.sql").missing, ["WP_DEPARTMENT_LINK", "WP_STATUS"]);
   assert.equal(entry(noCat, "extract_all_parts.sql").available, "unknown");
@@ -76,7 +78,7 @@ test("header has source hash, availability and warning codes, and no date", () =
   for (const l of header) assert.ok(!/\d{4}-\d{2}-\d{2}|\d{2}:\d{2}/.test(l), `date in header: ${l}`);
   assert.ok(!text.includes("\r"));
   assert.ok(text.endsWith("\n"));
-  const noCat = generateAll(ROOT);
+  const noCat = generateAll(ROOT, NO_CAT);
   const steps = noCat.get("queries/dwh/extract_wp_seqs_steps.sql")!;
   assert.ok(steps.includes("-- Available in the DWH: NO (missing tables listed in dwh/mapping.yaml: WP_DEPARTMENT_LINK, WP_STATUS; columns not checked yet)"));
   assert.ok(steps.includes("-- Converter: 2   Catalogue snapshot: none"));

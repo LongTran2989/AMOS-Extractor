@@ -24,8 +24,15 @@ export const CONVERTER_VERSION = 2;
 /** Longest placeholder value accepted at run time in openquery mode (A.5 #69). */
 export const PLACEHOLDER_MAX_LENGTH = 100;
 
-/** OPENQUERY accepts at most 8000 characters of query text (A.5 #83). */
-export const OPENQUERY_MAX_LENGTH = 8000;
+/**
+ * OPENQUERY accepts at most 8000 bytes of query text (A.5 #83). The text is sent as N'…' so
+ * Vietnamese survives, and an N'…' string holds 2 bytes per character: 4000 characters
+ * (confirmed live: a 7,889-character N'…' text gave SQL Server error 103).
+ */
+export const OPENQUERY_MAX_LENGTH = 4000;
+
+/** Room for the row cap the runner appends at run time (" FETCH FIRST 2000001 ROWS ONLY"). */
+export const RUN_CAP_RESERVE = " FETCH FIRST 2000001 ROWS ONLY".length;
 
 /**
  * Characters OPENQUERY receives: the exec text with each <NAME> replaced by its value, then
@@ -147,12 +154,13 @@ export function convertQuery(source: string, filename: string, opts: ConvertOpti
   const pretty = restorePlaceholders(prettySentinel, placeholders, marker);
   const exec = restorePlaceholders(execSentinel, placeholders, marker);
   if (opts.mapping.execMode === "openquery") {
-    // Each placeholder counts as its longest allowed value, so any value that passes the run-time check fits.
-    const len = openqueryLength(exec, placeholders.map((name) => ({ name, value: "x".repeat(PLACEHOLDER_MAX_LENGTH) })));
+    // Each placeholder counts as its longest allowed value and the runner's row cap is included,
+    // so any query converted here also fits when it runs.
+    const len = openqueryLength(exec, placeholders.map((name) => ({ name, value: "x".repeat(PLACEHOLDER_MAX_LENGTH) }))) + RUN_CAP_RESERVE;
     if (len > OPENQUERY_MAX_LENGTH) {
       throw new ConvertError(
         "E_TOO_LONG",
-        `The DWH query is ${len} characters long${placeholders.length ? " with the longest allowed values filled in" : ""}; the DWH link (OPENQUERY) accepts at most ${OPENQUERY_MAX_LENGTH}. Split the query or ask for RPC Out to be enabled.`,
+        `The DWH query is ${len} characters long (with the longest allowed values and the row limit filled in); the DWH link (OPENQUERY) accepts at most ${OPENQUERY_MAX_LENGTH}. Split the query or ask for RPC Out to be enabled.`,
       );
     }
   }
