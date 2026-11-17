@@ -9,6 +9,10 @@ export interface Script {
   fail?: Error;
   /** Send the columns and rows first, then fail (a connection lost mid-download). */
   failAfterRows?: boolean;
+  /** Informational server messages sent before an error (how the relay reports ORA- text). */
+  info?: { message: string; number: number }[];
+  /** An error sent after the request was cancelled (other than the usual ECANCEL). */
+  errorAfterCancel?: Error;
 }
 
 export class FakeRequest extends EventEmitter {
@@ -38,6 +42,7 @@ export class FakeRequest extends EventEmitter {
   pause() {}
   resume() {}
   private async play(s: Script) {
+    for (const m of s.info ?? []) this.emit("info", m);
     if (s.fail && !s.failAfterRows) {
       this.emit("error", s.fail);
       this.emit("done", {});
@@ -49,6 +54,7 @@ export class FakeRequest extends EventEmitter {
       this.emit("row", r);
       await new Promise((res) => setImmediate(res));
     }
+    if (this.cancelled && s.errorAfterCancel) this.emit("error", s.errorAfterCancel);
     if (this.cancelled) this.emit("error", Object.assign(new Error("Canceled."), { code: "ECANCEL" }));
     else if (s.fail) this.emit("error", s.fail);
     this.emit("done", {});

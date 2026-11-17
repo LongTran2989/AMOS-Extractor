@@ -1,10 +1,10 @@
 // Task 2.4: `npm run dwh:run -- <source.sql> [--param K=V] [--csv out.csv]` and
 // `--raw <oracle.sql>` (maintainers only). Runs converter output (or hand-written Oracle after
 // the same read-only check) through the relay; read-only.
-import { closeSync, openSync, readFileSync, writeSync } from "node:fs";
+import { closeSync, openSync, readFileSync, renameSync, writeSync } from "node:fs";
 import * as path from "node:path";
 import { listSources, convertSource } from "./sources.ts";
-import { loadMapping } from "./mapping.ts";
+import { loadMapping, type DwhMapping } from "./mapping.ts";
 import type { ConvertResult } from "./convert/index.ts";
 import { PLACEHOLDER_MAX_LENGTH } from "./convert/index.ts";
 import { assertReadOnlyOracle } from "./safety.ts";
@@ -65,8 +65,19 @@ function rawConversion(file: string): ConvertResult {
 
 const PREVIEW_PRINT_ROWS = 20;
 
-/** Runs one query and prints or saves the result. Returns the process exit code. */
-export async function dwhRun(pool: RelayPool, root: string, args: string[], log: (s: string) => void, signal?: AbortSignal): Promise<number> {
+/**
+ * Runs one query and prints or saves the result. Returns the process exit code.
+ * A CSV is written as <name>.part and renamed only when the download has ended, so a killed or
+ * crashed run never leaves a file that looks complete; a run that fails or reaches the row
+ * limit ends with an "INCOMPLETE: …" line.
+ */
+export async function dwhRun(
+  pool: RelayPool,
+  root: string,
+  args: string[],
+  log: (s: string) => void,
+  opts: { signal?: AbortSignal; mapping?: DwhMapping } = {},
+): Promise<number> {
   let parsed: RunArgs;
   try {
     parsed = parseRunArgs(args);
@@ -74,8 +85,19 @@ export async function dwhRun(pool: RelayPool, root: string, args: string[], log:
     log(e instanceof Error ? e.message : String(e));
     return 1;
   }
+  const part = parsed.csv ? `${parsed.csv}.part` : undefined;
   let fd: number | undefined;
   let written = 0;
+  const finishCsv = (lastLine?: string) => {
+    if (fd === undefined) return;
+    try {
+      if (lastLine) writeSync(fd, csvLine([lastLine]));
+    } finally {
+      closeSync(fd);
+      fd = undefined;
+      renameSync(part!, parsed.csv!);
+    }
+  };
   try {
     let conv: ConvertResult;
     if (parsed.raw) conv = rawConversion(parsed.raw);
@@ -88,12 +110,12 @@ export async function dwhRun(pool: RelayPool, root: string, args: string[], log:
       conv = convertSource(root, source);
       for (const w of conv.warnings) log(`Note ${w.code}: ${w.plain}`);
     }
-    const mapping = loadMapping(path.join(root, "dwh", "mapping.yaml"));
-    const handle = await runConverted(pool, conv, mapping, { mode: parsed.csv ? "export" : "preview", params: parsed.params, ...(signal ? { signal } : {}) });
+    const mapping = opts.mapping ?? loadMapping(path.join(root, "dwh", "mapping.yaml"));
+    const handle = await runConverted(pool, conv, mapping, { mode: parsed.csv ? "export" : "preview", params: parsed.params, ...(opts.signal ? { signal: opts.signal } : {}) });
     const names = handle.columns.map((c) => c.name);
     const cells = (r: unknown[]) => r.map((v, i) => formatCell(v, handle.columns[i]?.type ?? "unknown"));
-    if (parsed.csv) {
-      fd = openSync(parsed.csv, "w");
+    if (part) {
+      fd = openSync(part, "w");
       writeSync(fd, csvHeaderBytes());
       writeSync(fd, csvLine(names));
       for await (const r of handle.rows) {
@@ -108,12 +130,17 @@ export async function dwhRun(pool: RelayPool, root: string, args: string[], log:
       }
     }
     const { ms } = await handle.done;
+    if (part) finishCsv(handle.truncated() ? `INCOMPLETE: the row limit (${mapping.exportRowLimit}) was reached; the DWH has more rows.` : undefined);
     const more = handle.truncated() ? " (more available; the limit was reached)" : "";
     log(`${written} rows${more} in ${(ms / 1000).toFixed(1)} s${parsed.csv ? ` -> ${parsed.csv}` : written > PREVIEW_PRINT_ROWS ? ` (first ${PREVIEW_PRINT_ROWS} shown)` : ""}`);
     return 0;
   } catch (e) {
     const p = toPlain(e);
-    if (fd !== undefined) writeSync(fd, csvLine([`INCOMPLETE: the download stopped after ${written} rows. ${p.message}`]));
+    try {
+      finishCsv(`INCOMPLETE: the download stopped after ${written} rows. ${p.message}`);
+    } catch {
+      log(`The partial file ${part} could not be completed.`);
+    }
     log(p.message);
     if (p.detail) log(`Details: ${p.detail}`);
     return 1;

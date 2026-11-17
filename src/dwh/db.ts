@@ -47,6 +47,19 @@ export async function openPool(config: sql.config): Promise<sql.ConnectionPool> 
 }
 
 /**
+ * Links the server's other messages (informational ones and later errors) to the error as
+ * `precedingErrors`, where the plain-error mapper looks for ORA- codes. The array stays live,
+ * so messages that arrive after the error are included too.
+ */
+export function attachServerMessages(e: unknown, messages: unknown[]): unknown {
+  if (!e || typeof e !== "object") return e;
+  const err = e as { precedingErrors?: unknown[] };
+  for (const p of err.precedingErrors ?? []) if (!messages.includes(p)) messages.unshift(p);
+  err.precedingErrors = messages;
+  return e;
+}
+
+/**
  * Sends one already-built relay statement and collects every row (for small fixed reads: the
  * catalogue and the zero-row compile check). Callers build `tsql` with buildRelayStatement or a
  * fixed template; this function adds nothing to it.
@@ -65,12 +78,19 @@ export function runRelay(
     let columns: string[] = [];
     const rows: unknown[][] = [];
     let failure: unknown;
+    const serverMessages: unknown[] = [];
+    req.on("info", (m: unknown) => {
+      if (serverMessages.length < 50) serverMessages.push(m);
+    });
     req.on("recordset", (cols: { name: string }[]) => {
       const list: { name: string }[] = Array.isArray(cols) ? cols : (Object.values(cols ?? {}) as { name: string }[]);
       columns = list.map((c) => c.name);
     });
     req.on("row", (r: unknown[]) => rows.push(r));
-    req.on("error", (e: unknown) => (failure ??= e));
+    req.on("error", (e: unknown) => {
+      if (failure === undefined) failure = attachServerMessages(e, serverMessages);
+      else serverMessages.push(e);
+    });
     req.on("done", () => (failure ? reject(failure) : resolve({ columns, rows })));
     req.query(tsql, () => {});
   });

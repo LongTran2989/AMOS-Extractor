@@ -13,11 +13,10 @@ import { assertReadOnlyOracle } from "./safety.ts";
 import { applyPreviewCap, buildRelayStatement } from "./relay.ts";
 import { runRelay } from "./db.ts";
 import { checkOutputNames, type RelayPool } from "./run.ts";
+import { toPlain } from "./errorsPlain.ts";
 
 /** Value used for placeholders during the compile check (passes the openquery value check). */
 const DUMMY_VALUE = "X";
-
-const firstLine = (e: unknown) => String(e instanceof Error ? e.message : e).split("\n")[0]!.slice(0, 500);
 
 /** Zero-row version of an Oracle query: FETCH FIRST 0 ROWS ONLY on 12c+, else a WHERE 1 = 0 wrapper. */
 export function zeroRows(exec: string, version: number): string {
@@ -53,7 +52,10 @@ export async function compileAll(
       await runRelay(pool, tsql, inputs);
       results.push({ source, ok: true });
     } catch (e) {
-      results.push({ source, ok: false, message: e instanceof ConvertError ? `${e.code}: ${e.plain}` : firstLine(e) });
+      // Plain message, with the .env values (server, user, password) removed from the technical part.
+      const p = toPlain(e);
+      const ora = /ORA-\d{5}[^\n"]*/.exec(p.detail)?.[0];
+      results.push({ source, ok: false, message: e instanceof ConvertError ? `${e.code}: ${e.plain}` : `${p.message}${ora ? ` (${ora.trim()})` : ""}` });
     }
   }
   return results;

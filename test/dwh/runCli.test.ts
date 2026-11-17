@@ -87,3 +87,44 @@ test("--raw runs hand-written Oracle only after the read-only check", async () =
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test("the CSV is written under a .part name until the download has finished", async () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "dwh-run-"));
+  try {
+    const csv = path.join(dir, "out.csv");
+    const { existsSync } = await import("node:fs");
+    const seen: boolean[][] = [];
+    const base = fakePool(["PARTNO"], Array.from({ length: 10 }, (_, i) => [`P-${i}`]));
+    const pool = {
+      request: () => {
+        const r = base.request();
+        let n = 0;
+        r.on("row", () => {
+          if (++n === 6) seen.push([existsSync(csv), existsSync(`${csv}.part`)]);
+        });
+        return r;
+      },
+    };
+    assert.equal(await dwhRun(pool, ROOT, ["extract_all_parts.sql", "--csv", csv], io().log), 0);
+    assert.deepEqual(seen, [[false, true]]);
+    assert.ok(existsSync(csv) && !existsSync(`${csv}.part`));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("an export that reaches the row limit ends with an INCOMPLETE line", async () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "dwh-run-"));
+  try {
+    const csv = path.join(dir, "out.csv");
+    const { loadMapping } = await import("../../src/dwh/mapping.ts");
+    const mapping = { ...loadMapping(path.join(ROOT, "dwh", "mapping.yaml")), exportRowLimit: 3 };
+    const pool = fakePool(["PARTNO"], Array.from({ length: 10 }, (_, i) => [`P-${i}`]));
+    assert.equal(await dwhRun(pool, ROOT, ["extract_all_parts.sql", "--csv", csv], io().log, { mapping }), 0);
+    const lines = readFileSync(csv, "utf8").trimEnd().split("\r\n");
+    assert.equal(lines.length, 5);
+    assert.match(lines[4]!, /INCOMPLETE: .*row limit/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

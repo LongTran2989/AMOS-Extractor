@@ -56,7 +56,11 @@ function typeIssues(table: string, column: string, pgType: string, dataType: str
     } else if (n !== undefined && len !== null && len < Number(n)) {
       issues.push({ kind: "truncation_risk", severity: "warning", ...at, plain: `AMOS allows ${n} characters; the DWH keeps at most ${len}, so long values may be cut off.` });
     }
-  } else if (!LOB_TYPES.has(ora)) {
+  } else if (LOB_TYPES.has(ora)) {
+    // #65: no CLOB rule is built, so the converter refuses queries that use such a column.
+    issues.push({ kind: "retyped", severity: "error", ...at, plain: `AMOS stores text (${pgType}); the DWH stores it as ${dataType}, which the converter does not handle yet. Queries that use it are refused.` });
+    return issues;
+  } else {
     issues.push({ kind: "retyped", severity: "error", ...at, plain: `AMOS stores text (${pgType}); the DWH stores ${dataType}.` });
     return issues;
   }

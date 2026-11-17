@@ -57,11 +57,11 @@ test("varchar(n) into a shorter VARCHAR2/NVARCHAR2 is a truncation_risk warning"
   assert.deepEqual(diff(cat(c("WP_HEADER", "STATION", "NVARCHAR2", 10)), ["wp_header.station"]), []);
 });
 
-test("text <-> VARCHAR2(4000) is a truncation_risk warning; text <-> CLOB is fine", () => {
+test("text <-> VARCHAR2(4000) is a truncation_risk warning; text <-> CLOB/NCLOB is retyped (#65, as the converter treats it)", () => {
   const used = ["wo_text_description.text_html"];
   assert.deepEqual(kinds(diff(cat(c("WO_TEXT_DESCRIPTION", "TEXT_HTML", "VARCHAR2", 4000)), used)), ["truncation_risk:warning:WO_TEXT_DESCRIPTION.TEXT_HTML"]);
-  assert.deepEqual(diff(cat(c("WO_TEXT_DESCRIPTION", "TEXT_HTML", "CLOB")), used), []);
-  assert.deepEqual(diff(cat(c("WO_TEXT_DESCRIPTION", "TEXT_HTML", "NCLOB")), used), []);
+  assert.deepEqual(kinds(diff(cat(c("WO_TEXT_DESCRIPTION", "TEXT_HTML", "CLOB")), used)), ["retyped:error:WO_TEXT_DESCRIPTION.TEXT_HTML"]);
+  assert.deepEqual(kinds(diff(cat(c("WO_TEXT_DESCRIPTION", "TEXT_HTML", "NCLOB")), used)), ["retyped:error:WO_TEXT_DESCRIPTION.TEXT_HTML"]);
 });
 
 test("float8 <-> BINARY_DOUBLE, NUMBER or FLOAT is fine", () => {
@@ -73,7 +73,7 @@ test("float8 <-> BINARY_DOUBLE, NUMBER or FLOAT is fine", () => {
 test("VARCHAR2 or CLOB in a non-Unicode database is maybe_lost_unicode; NVARCHAR2 is not", () => {
   const over = { dbCharset: "WE8MSWIN1252" };
   assert.deepEqual(kinds(diff(cat(c("WP_HEADER", "STATION", "VARCHAR2", 4)), ["wp_header.station"], over)), ["maybe_lost_unicode:warning:WP_HEADER.STATION"]);
-  assert.deepEqual(kinds(diff(cat(c("WO_TEXT_DESCRIPTION", "TEXT_HTML", "CLOB")), ["wo_text_description.text_html"], over)), ["maybe_lost_unicode:warning:WO_TEXT_DESCRIPTION.TEXT_HTML"]);
+  assert.deepEqual(kinds(diff(cat(c("WO_TEXT_DESCRIPTION", "TEXT_HTML", "VARCHAR2", 4000)), ["wo_text_description.text_html"], over)), ["maybe_lost_unicode:warning:WO_TEXT_DESCRIPTION.TEXT_HTML", "truncation_risk:warning:WO_TEXT_DESCRIPTION.TEXT_HTML"]);
   assert.deepEqual(diff(cat(c("WP_HEADER", "STATION", "NVARCHAR2", 4)), ["wp_header.station"], over), []);
 });
 

@@ -6,7 +6,7 @@ import { convertQuery, type ConvertResult } from "../../src/dwh/convert/index.ts
 import { ConvertError } from "../../src/dwh/convert/errors.ts";
 import { ConfigMissing, dwhConfigFromEnv } from "../../src/dwh/db.ts";
 import { runConverted } from "../../src/dwh/run.ts";
-import { fakePool, neverPool } from "./fakePool.ts";
+import { fakePool, neverPool, scriptedPool } from "./fakePool.ts";
 import { MAPPING, ROOT, csvIndex } from "./helpers.ts";
 
 const conv = (over: Partial<ConvertResult> = {}): ConvertResult => ({
@@ -169,4 +169,26 @@ test("config error names the variable but not its value", () => {
   assert.equal(cfg.connectionTimeout, 15000);
   assert.equal(cfg.requestTimeout, 120000);
   assert.equal(cfg.pool?.max, 4);
+});
+
+test("the ORA- text the relay sends as an informational message reaches the plain error", async () => {
+  const { toPlain } = await import("../../src/dwh/errorsPlain.ts");
+  const pool = scriptedPool(() => ({
+    columns: [],
+    rows: [],
+    info: [{ number: 7412, message: 'OLE DB provider "OraOLEDB.Oracle" for linked server "DWH_DB" returned message "ORA-00904: "X"."NOPE": invalid identifier".' }],
+    fail: Object.assign(new Error('An error occurred while preparing the query "SELECT ..." for execution against OLE DB provider "OraOLEDB.Oracle" for linked server "DWH_DB".'), { name: "RequestError", code: "EREQUEST", number: 7321 }),
+  }));
+  const e = await runConverted(pool, conv(), MAPPING, { mode: "preview", params: {} }).then(() => undefined, (x) => x);
+  assert.ok(e, "the run failed");
+  assert.match(toPlain(e, {}).message, /no column called X\.NOPE/);
+});
+
+test("an error that arrives after the runner cancelled at the cap does not throw the preview away", async () => {
+  const rows = Array.from({ length: 600 }, (_, i) => [i, "x"]);
+  const pool = scriptedPool(() => ({ columns: ["z_A", "z_B"], rows, errorAfterCancel: Object.assign(new Error("OLE DB provider reported an error"), { number: 7330 }) }));
+  const h = await runConverted(pool, conv(), MAPPING, { mode: "preview", params: {} });
+  assert.equal((await collect(h.rows)).length, 500);
+  assert.equal((await h.done).rowCount, 500);
+  assert.equal(h.truncated(), true);
 });

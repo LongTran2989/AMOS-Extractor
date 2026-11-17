@@ -36,3 +36,25 @@ test("compileAll fills placeholders with a safe dummy value", async () => {
   assert.ok(pool.made.every((r) => !r.sent!.includes("<INSERT_WPNO_HERE>")));
   assert.match(pool.made[i]!.sent!, /^EXEC \(N'/);
 });
+
+test("compileAll messages are plain and never show the .env values", async () => {
+  const before = { ...process.env };
+  process.env.DWH_SERVER = "relay-host-17";
+  process.env.DWH_USER = "dwh_reader_x";
+  try {
+    const pool = scriptedPool(() => ({
+      columns: [],
+      rows: [],
+      fail: Object.assign(new Error("ORA-00942: table or view does not exist (on relay-host-17 as dwh_reader_x)"), { name: "RequestError", code: "EREQUEST", number: 7321 }),
+    }));
+    const [r] = await compileAll(pool, ROOT);
+    assert.equal(r!.ok, false);
+    assert.match(r!.message!, /^The DWH has no table called/);
+    assert.ok(!r!.message!.includes("relay-host-17") && !r!.message!.includes("dwh_reader_x"), String(r!.message));
+  } finally {
+    process.env.DWH_SERVER = before.DWH_SERVER;
+    process.env.DWH_USER = before.DWH_USER;
+    if (before.DWH_SERVER === undefined) delete process.env.DWH_SERVER;
+    if (before.DWH_USER === undefined) delete process.env.DWH_USER;
+  }
+});

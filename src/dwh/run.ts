@@ -8,7 +8,7 @@ import type { SqlType } from "./convert/scope.ts";
 import type { DwhMapping } from "./mapping.ts";
 import { assertReadOnlyOracle } from "./safety.ts";
 import { applyPreviewCap, buildRelayStatement } from "./relay.ts";
-import { EXPORT_TIMEOUT_MS, PREVIEW_TIMEOUT_MS } from "./db.ts";
+import { attachServerMessages, EXPORT_TIMEOUT_MS, PREVIEW_TIMEOUT_MS } from "./db.ts";
 
 export const PREVIEW_ROWS = 500;
 
@@ -146,10 +146,20 @@ export async function runConverted(pool: RelayPool, conv: ConvertResult, mapping
     }
     wake();
   });
+  // The relay sends the Oracle text (ORA-…) as informational messages next to its own error.
+  const serverMessages: unknown[] = [];
+  req.on("info", (m: unknown) => {
+    if (serverMessages.length < 50) serverMessages.push(m);
+  });
   req.on("error", (e: unknown) => {
-    if (cancelledByUs && isCancel(e)) return;
-    failure ??= e;
-    columnsReady(e instanceof Error ? e : new Error(String(e)));
+    // Once we stopped reading (row cap, reader stopped early, or Stop), later errors do not matter.
+    if (cancelledByUs || isCancel(e)) return;
+    if (failure !== undefined) {
+      serverMessages.push(e);
+      return;
+    }
+    failure = attachServerMessages(e, serverMessages);
+    columnsReady(failure instanceof Error ? failure : new Error(String(failure)));
     wake();
   });
   req.on("done", () => {

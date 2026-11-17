@@ -85,7 +85,7 @@ async function dispatch(command: string, args: string[], root: string): Promise<
       const stop = () => ac.abort();
       process.once("SIGINT", stop);
       try {
-        return await withPool((pool) => dwhRun(pool, root, args, (s) => console.log(s), ac.signal));
+        return await withPool((pool) => dwhRun(pool, root, args, (s) => console.log(s), { signal: ac.signal }));
       } finally {
         process.off("SIGINT", stop);
       }
