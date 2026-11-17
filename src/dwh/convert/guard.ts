@@ -126,16 +126,28 @@ export function isSubquery(node: PgNode): boolean {
   return !!node && typeof node === "object" && !node.type && !!node.ast;
 }
 
-class Walker {
-  warnings: ConvertWarning[] = [];
+/**
+ * Finds source locations for errors. node-sql-parser only records locations on some nodes,
+ * so walkers `track` the nearest located node and search the tokens for a word from there.
+ */
+export class Locator {
   private lastOffset = 0;
   private sa: SelectAst;
   constructor(sa: SelectAst) {
     this.sa = sa;
   }
 
+  track(node: PgNode): void {
+    const off = node?.loc?.start?.offset;
+    if (typeof off === "number") this.lastOffset = off;
+  }
+
+  fail(code: ErrorCode, plain: string, word?: string | string[], detail = ""): never {
+    throw new ConvertError(code, plain, detail, this.locOf(word));
+  }
+
   /** Location of `word` (first token at or after the nearest known position), else that position. */
-  private locOf(word?: string | string[]): SourceLoc | undefined {
+  locOf(word?: string | string[]): SourceLoc | undefined {
     if (Array.isArray(word)) {
       // A run of consecutive words, e.g. ["wp_header", "h"] for a table alias.
       const sig = significant(this.sa.tokens);
@@ -154,14 +166,21 @@ class Walker {
     }
     return this.lastOffset > 0 ? locAt(this.sa.sql, this.lastOffset) : undefined;
   }
+}
+
+class Walker {
+  warnings: ConvertWarning[] = [];
+  private loc: Locator;
+  constructor(sa: SelectAst) {
+    this.loc = new Locator(sa);
+  }
 
   fail(code: ErrorCode, plain: string, word?: string | string[], detail = ""): never {
-    throw new ConvertError(code, plain, detail, this.locOf(word));
+    this.loc.fail(code, plain, word, detail);
   }
 
   private track(node: PgNode) {
-    const off = node?.loc?.start?.offset;
-    if (typeof off === "number") this.lastOffset = off;
+    this.loc.track(node);
   }
 
   select(node: PgNode): void {
