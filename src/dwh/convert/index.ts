@@ -52,7 +52,8 @@ export interface ConvertResult {
   exec: string;
   warnings: ConvertWarning[];
   placeholders: { name: string; maxLength: number }[];
-  outputs: { name: string; type: SqlType }[];
+  /** `unnamed`: the source gave no name; `name` is then the printed formula (Oracle's own naming may differ). */
+  outputs: { name: string; type: SqlType; unnamed?: boolean }[];
   orderKeys: string[];
   usedColumns: string[];
   available: boolean | "unknown";
@@ -157,7 +158,7 @@ export function convertQuery(source: string, filename: string, opts: ConvertOpti
   }
 
   const firstCols = q.branches[0]!.columns;
-  const outputs = q.outputs.map((o, i) => (o.name ? o : { name: printExpr(firstCols[i]!.e), type: o.type }));
+  const outputs = q.outputs.map((o, i) => (o.name ? o : { name: printExpr(firstCols[i]!.e), type: o.type, unnamed: true }));
   const avail = availability(scope, opts.catalogue, opts.mapping);
   return {
     pretty,

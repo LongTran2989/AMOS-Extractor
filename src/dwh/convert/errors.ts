@@ -24,7 +24,11 @@ export type ErrorCode =
   | "E_SELF_CHECK" // A.4 step 10: converter bug
   | "E_FORBIDDEN" // A.8 #2: Oracle text failed the read-only scan
   | "E_TOO_LONG" // #83
-  | "E_MISSING_IN_DWH"; // #6, raised by the runner (Phase 2)
+  | "E_MISSING_IN_DWH" // #6, raised by the runner (Phase 2)
+  | "E_UNSAFE_PARAM_VALUE" // #69: placeholder value not allowed in openquery mode
+  | "E_PARAM_MISSING" // #69: placeholder without a value
+  | "E_UNKNOWN_PARAM" // a value given for a placeholder the query does not have
+  | "E_STOPPED"; // the person stopped the run (Stop button, Ctrl+C)
 
 export type WarningCode =
   | "W_UTC_TODAY" // #19

@@ -117,7 +117,7 @@ test("#21 date-typed outputs are reported as date", () => {
     { name: "z_WP_START_DATE", type: "int" },
   ]);
   const d = convertQuery("SELECT DATE '1971-12-31' + wp_header.start_date FROM wp_header", "t.sql", opts);
-  assert.deepEqual(d.outputs, [{ name: "(DATE '1971-12-31' + WP_HEADER.START_DATE)", type: "date" }]);
+  assert.deepEqual(d.outputs, [{ name: "(DATE '1971-12-31' + WP_HEADER.START_DATE)", type: "date", unnamed: true }]);
 });
 
 test("result fields: placeholders, warnings, used columns, availability", () => {
