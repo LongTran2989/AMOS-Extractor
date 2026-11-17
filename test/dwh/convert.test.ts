@@ -79,6 +79,15 @@ test("a read-only scan failure throws E_FORBIDDEN (broken printer injected)", ()
   assert.equal(f.code, "E_FORBIDDEN");
 });
 
+test("#83 E_TOO_LONG counts each placeholder as its longest (100-character) value", () => {
+  // About 7,900 characters with '<P>' written as-is, but over 8000 once <P> holds 100 characters.
+  const list = Array.from({ length: 712 }, (_, i) => `'W${String(i).padStart(4, "0")}'`).join(", ");
+  const sql = `SELECT wp_header.wpno_i AS z_WP_ID FROM wp_header WHERE wp_header.station = '<P>' AND wp_header.wpno IN (${list})`;
+  const asIs = convertQuery(sql, "t.sql", { ...opts, mapping: { ...MAPPING, execMode: "exec_at" } }).exec.replace(/'/g, "''").length;
+  assert.ok(asIs <= 8000 && asIs + 97 > 8000, `length ${asIs}`);
+  assert.equal(rejects(() => convertQuery(sql, "t.sql", opts)).code, "E_TOO_LONG");
+});
+
 test("#83 openquery mode: exec text over 8000 chars after quote doubling throws E_TOO_LONG; exec_at has no limit", () => {
   const list = Array.from({ length: 900 }, (_, i) => `'W${String(i).padStart(4, "0")}'`).join(", ");
   const sql = `SELECT wp_header.wpno_i AS z_WP_ID FROM wp_header WHERE wp_header.wpno IN (${list})`;
@@ -158,7 +167,7 @@ test("string: the real minute sums, the 7 h / 24 h chain, and day arithmetic", (
   );
   assert.equal(whereOf("wp_header.start_date <= (CURRENT_DATE - DATE '1971-12-31')"), `(WP_HEADER.START_DATE <= (${TODAY} - DATE '1971-12-31'))`);
   assert.equal(
-    whereOf("(DATE '1971-12-31' + wp_header.start_date) > CURRENT_DATE - INTERVAL '2' WEEK"),
+    whereOf("(DATE '1971-12-31' + wp_header.start_date) > CURRENT_DATE - INTERVAL '2 week'"),
     `((DATE '1971-12-31' + WP_HEADER.START_DATE) > (${TODAY} - NUMTODSINTERVAL((7 * 2), 'DAY')))`,
   );
 });

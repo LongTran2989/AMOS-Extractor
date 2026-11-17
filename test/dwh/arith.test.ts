@@ -26,6 +26,14 @@ test("EXTRACT is numeric in PostgreSQL 14, so dividing it is not integer divisio
   assert.ok(r.codes.includes("W_DECIMAL_SCALE"));
 });
 
+test("COALESCE combines the numeric types of all its arguments (int and numeric -> numeric, no TRUNC)", () => {
+  const r = exprIr("COALESCE(wp_header.start_date, 1.5) / 2");
+  assert.equal(r.e.k, "bin");
+  assert.ok(r.codes.includes("W_DECIMAL_SCALE"));
+  // All int: still integer division.
+  assert.equal(exprIr("COALESCE(wp_header.start_date, 0) / 2").e.k, "fn");
+});
+
 test("#52 bit, JSON and other operators are rejected", () => {
   for (const op of ["^", "&", "|", "#", "<<", ">>", "->", "->>", "@>"]) {
     assert.equal(rejects(() => exprIr(`wp_header.start_date ${op} 2`)).code, "E_UNSUPPORTED", op);

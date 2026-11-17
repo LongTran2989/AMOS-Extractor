@@ -66,6 +66,12 @@ function isPredicate(e: PgExpr): boolean {
 /** Printed name of a CTE output column as its defining query prints it. */
 function ctePrintedName(out: CteOutput, scope: ScopeInfo, ctx: RewriteCtx): string {
   if (out.aliased) return quoteAlias(out.name);
+  const r = out.expr?.type === "column_ref" && out.expr.table ? scope.resolve(out.expr) : undefined;
+  if (r?.kind === "table") {
+    // An approved rename is printed NEW AS "OLD" inside the WITH query (selectIr), so refer to OLD.
+    const nm = oracleColumnName(`${r.table}.${r.column}`, { ...ctx, csv: scope.csv, usage: "output" });
+    if (nm.aliasAs) return oracleIdent(nm.aliasAs);
+  }
   const ir = rewriteExpr(out.expr, scope, ctx);
   if (ir.k !== "col") failAt(ctx, out.expr, "E_UNSUPPORTED", `The WITH query column ${out.name} needs a name.`);
   return ir.name;

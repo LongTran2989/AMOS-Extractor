@@ -78,7 +78,7 @@ test("A.4: ± INTERVAL in days, hours, minutes, seconds and weeks becomes NUMTOD
   assert.deepEqual(rwDate("CURRENT_TIMESTAMP - INTERVAL '30' MINUTE"), bin("-", NOW, iv(30, "MINUTE")));
   assert.deepEqual(rwDate("CURRENT_TIMESTAMP + INTERVAL '5 seconds'"), bin("+", NOW, iv(5, "SECOND")));
   assert.deepEqual(rwDate("CURRENT_TIMESTAMP + INTERVAL '100' HOUR"), bin("+", NOW, iv(100, "HOUR")));
-  assert.deepEqual(rwDate("CURRENT_DATE - INTERVAL '2' WEEK"), bin("-", TODAY, iv(bin("*", num(7), num(2)), "DAY")));
+  assert.deepEqual(rwDate("CURRENT_DATE - INTERVAL '2 week'"), bin("-", TODAY, iv(bin("*", num(7), num(2)), "DAY")));
   assert.deepEqual(rwDate("INTERVAL '1' DAY + CURRENT_TIMESTAMP"), bin("+", NOW, iv(1, "DAY")));
 });
 

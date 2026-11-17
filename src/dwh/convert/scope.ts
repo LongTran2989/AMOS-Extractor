@@ -343,7 +343,11 @@ function isRetyped(pgType: string, dataType: string): boolean {
   return false;
 }
 
-/** Column name as Oracle knows it; `aliasAs` is set for an approved rename (print NEW AS "old"). */
+/**
+ * Column name as Oracle knows it; `aliasAs` is set for an approved rename (print NEW AS "OLD"):
+ * the upper-case name the DWH would report without the rename, so result names and outer
+ * references to an unaliased WITH column (C.OLD) keep working.
+ */
 export function oracleColumnName(ref: string, ctx: NameCtx): { name: string; aliasAs?: string } {
   const [table, column] = ref.toLowerCase().split(".") as [string, string];
   const rename = ctx.mapping.columns[`${table}.${column}`];
@@ -362,7 +366,7 @@ export function oracleColumnName(ref: string, ctx: NameCtx): { name: string; ali
     if (ctx.warnings) addWarning(ctx.warnings, { code: "W_RETYPED_COLUMN", plain: `${plain} Its values may look different.` });
   }
   const name = oracleIdent(catCol?.name ?? dwhName.toUpperCase());
-  return rename ? { name, aliasAs: column } : { name };
+  return rename ? { name, aliasAs: column.toUpperCase() } : { name };
 }
 
 /** Oracle data type of an AMOS column in the catalogue snapshot, if known. */

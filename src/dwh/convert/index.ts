@@ -27,6 +27,16 @@ export const PLACEHOLDER_MAX_LENGTH = 100;
 /** OPENQUERY accepts at most 8000 characters of query text (A.5 #83). */
 export const OPENQUERY_MAX_LENGTH = 8000;
 
+/**
+ * Characters OPENQUERY receives: the exec text with each <NAME> replaced by its value, then
+ * every quote doubled for the outer N'…' string.
+ */
+export function openqueryLength(exec: string, values: { name: string; value: string }[]): number {
+  let text = exec;
+  for (const { name, value } of values) text = text.split(`<${name}>`).join(value);
+  return text.replace(/'/g, "''").length;
+}
+
 export interface ConvertOptions {
   model: Model;
   csv: CsvIndex;
@@ -104,7 +114,7 @@ export function selfCheck(exec: string): void {
 }
 
 export function convertQuery(source: string, filename: string, opts: ConvertOptions): ConvertResult {
-  const { sql, placeholders } = preprocess(source);
+  const { sql, placeholders, marker } = preprocess(source);
 
   const lint = lintSql(sql, filename, opts.model, opts.csv);
   if (lint.errors.length) {
@@ -133,14 +143,15 @@ export function convertQuery(source: string, filename: string, opts: ConvertOpti
   selfCheck(execSentinel);
   assertReadOnlyOracle(execSentinel);
 
-  const pretty = restorePlaceholders(prettySentinel, placeholders);
-  const exec = restorePlaceholders(execSentinel, placeholders);
+  const pretty = restorePlaceholders(prettySentinel, placeholders, marker);
+  const exec = restorePlaceholders(execSentinel, placeholders, marker);
   if (opts.mapping.execMode === "openquery") {
-    const len = exec.replace(/'/g, "''").length;
+    // Each placeholder counts as its longest allowed value, so any value that passes the run-time check fits.
+    const len = openqueryLength(exec, placeholders.map((name) => ({ name, value: "x".repeat(PLACEHOLDER_MAX_LENGTH) })));
     if (len > OPENQUERY_MAX_LENGTH) {
       throw new ConvertError(
         "E_TOO_LONG",
-        `The DWH query is ${len} characters long; the DWH link (OPENQUERY) accepts at most ${OPENQUERY_MAX_LENGTH}. Split the query or ask for RPC Out to be enabled.`,
+        `The DWH query is ${len} characters long${placeholders.length ? " with the longest allowed values filled in" : ""}; the DWH link (OPENQUERY) accepts at most ${OPENQUERY_MAX_LENGTH}. Split the query or ask for RPC Out to be enabled.`,
       );
     }
   }

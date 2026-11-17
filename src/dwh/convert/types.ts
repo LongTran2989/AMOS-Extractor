@@ -91,11 +91,12 @@ export function inferType(expr: PgExpr, scope: ScopeInfo): SqlType {
         case "NULLIF":
           return inferType(args[0], scope);
         case "COALESCE": {
-          for (const a of args) {
-            const t = inferType(a, scope);
-            if (t !== "unknown") return t;
-          }
-          return "unknown";
+          // PostgreSQL resolves one type for all arguments: int < numeric < float (NULLs ignored).
+          const known = args.map((a) => inferType(a, scope)).filter((t) => t !== "unknown");
+          if (!known.length) return "unknown";
+          const rank: Partial<Record<SqlType, number>> = { int: 1, numeric: 2, float: 3 };
+          if (known.every((t) => rank[t])) return known.reduce((a, b) => (rank[b]! > rank[a]! ? b : a));
+          return known.every((t) => t === known[0]) ? known[0]! : "unknown"; // mixed kinds: do not guess
         }
         default:
           return "unknown";

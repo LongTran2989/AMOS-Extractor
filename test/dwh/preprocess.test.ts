@@ -93,9 +93,24 @@ test("unterminated string or comment throws E_PARSE", () => {
   assert.equal(code(() => lex("SELECT /* abc", "pg")), "E_PARSE");
 });
 
-test("INTERVAL 'n' WEEK is kept as 'n week' (the parser would drop WEEK)", () => {
-  const r = preprocess("SELECT t.a FROM t WHERE t.d > CURRENT_DATE - INTERVAL '2' WEEK");
+test("INTERVAL 'n' WEEK is refused (not valid PostgreSQL); INTERVAL 'n week' is kept", () => {
+  let err: unknown;
+  try {
+    preprocess("SELECT t.a FROM t WHERE t.d > CURRENT_DATE - INTERVAL '2' WEEK");
+  } catch (e) {
+    err = e;
+  }
+  assert.ok(err instanceof ConvertError);
+  assert.equal(err.code, "E_UNSUPPORTED");
+  assert.match(err.plain, /2 week/);
+  const r = preprocess("SELECT t.a FROM t WHERE t.d > CURRENT_DATE - INTERVAL '2 week'");
   assert.equal(r.sql, "SELECT t.a FROM t WHERE t.d > CURRENT_DATE - INTERVAL '2 week'");
+});
+
+test("a literal that looks like a sentinel is not turned into a placeholder", () => {
+  const src = "SELECT t.a FROM t WHERE t.b = '<X>' AND t.c = '__PH_X__'";
+  const r = preprocess(src);
+  assert.equal(restorePlaceholders(r.sql, r.placeholders, r.marker), src);
 });
 
 test("restorePlaceholders round-trips", () => {

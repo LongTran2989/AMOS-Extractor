@@ -4,17 +4,23 @@ import { lex, type Token } from "../lex.ts";
 import { ConvertError, locAt } from "./errors.ts";
 
 const PLACEHOLDER = /<([A-Z0-9_]+)>/g;
-const SENTINEL = /__PH_([A-Z0-9_]+)__/g;
-const INTERVAL_UNITS = /^(YEAR|MONTH|WEEK|DAY|HOUR|MINUTE|SECOND)S?$/i;
+export const DEFAULT_MARKER = "__PH_";
 
 function blank(text: string): string {
   return text.replace(/[^\n]/g, " ");
 }
 
-export function preprocess(source: string): { sql: string; placeholders: string[] } {
+/** "__PH_", or "__PH1_", "__PH2_", … when the source already contains the shorter one. */
+function pickMarker(text: string): string {
+  if (!text.includes(DEFAULT_MARKER)) return DEFAULT_MARKER;
+  for (let n = 1; ; n++) if (!text.includes(`__PH${n}_`)) return `__PH${n}_`;
+}
+
+export function preprocess(source: string): { sql: string; placeholders: string[]; marker: string } {
   const text = source.replace(/\r\n?/g, "\n");
   const tokens = lex(text, "pg");
   const placeholders: string[] = [];
+  const marker = pickMarker(text);
   const out: string[] = [];
 
   const next = (i: number): Token | undefined => {
@@ -69,29 +75,36 @@ export function preprocess(source: string): { sql: string; placeholders: string[
       out.push(
         t.text.replace(PLACEHOLDER, (_m, name: string) => {
           if (!placeholders.includes(name)) placeholders.push(name);
-          return `__PH_${name}__`;
+          return `${marker}${name}__`;
         }),
       );
       continue;
     }
-    // INTERVAL 'n' WEEK: node-sql-parser drops the WEEK unit, so keep it inside the string.
+    // INTERVAL 'n' WEEK is not valid PostgreSQL (AMOS refuses it), and node-sql-parser would
+    // silently drop the WEEK unit; INTERVAL 'n week' is valid and converted.
     if (t.kind === "word" && t.text.toUpperCase() === "INTERVAL") {
       const str = next(i);
       const strIdx = str ? tokens.indexOf(str) : -1;
       const unit = strIdx >= 0 ? next(strIdx) : undefined;
-      if (str?.kind === "string" && unit?.kind === "word" && /^WEEKS?$/i.test(unit.text) && INTERVAL_UNITS.test(unit.text)) {
-        const unitIdx = tokens.indexOf(unit);
-        out.push(t.text, " ", `${str.text.slice(0, -1)} week'`);
-        i = unitIdx;
-        continue;
+      if (str?.kind === "string" && unit?.kind === "word" && /^WEEKS?$/i.test(unit.text)) {
+        const n = str.text.slice(1, -1).trim();
+        throw new ConvertError(
+          "E_UNSUPPORTED",
+          `INTERVAL '${n}' WEEK is not valid PostgreSQL. Write INTERVAL '${n} week' instead.`,
+          "",
+          locAt(text, t.offset),
+        );
       }
     }
     out.push(t.text);
   }
-  return { sql: out.join(""), placeholders };
+  return { sql: out.join(""), placeholders, marker };
 }
 
-/** Puts the original <NAME> text back where the sentinels are. */
-export function restorePlaceholders(text: string, placeholders: string[]): string {
-  return text.replace(SENTINEL, (m, name: string) => (placeholders.includes(name) ? `<${name}>` : m));
+/** Puts the original <NAME> text back where the sentinels (marker + NAME + "__") are. */
+export function restorePlaceholders(text: string, placeholders: string[], marker = DEFAULT_MARKER): string {
+  if (!placeholders.length) return text;
+  const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const names = [...placeholders].sort((a, b) => b.length - a.length).map(esc).join("|");
+  return text.replace(new RegExp(`${esc(marker)}(${names})__`, "g"), (_m, name: string) => `<${name}>`);
 }

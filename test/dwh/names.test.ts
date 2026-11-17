@@ -127,7 +127,7 @@ test("#78 a renamed column needs approval in mapping.yaml", () => {
   const renamed: DwhMapping = { ...mapping, columns: { "wo_header.state": { dwh: "STATE_NEW" } } };
   assert.equal(rejects(() => oracleColumnName("wo_header.state", { mapping: renamed, csv })).code, "E_RENAMED_NEEDS_APPROVAL");
   const approved: DwhMapping = { ...mapping, columns: { "wo_header.state": { dwh: "STATE_NEW", keepOutputName: true } } };
-  assert.deepEqual(oracleColumnName("wo_header.state", { mapping: approved, csv }), { name: "STATE_NEW", aliasAs: "state" });
+  assert.deepEqual(oracleColumnName("wo_header.state", { mapping: approved, csv }), { name: "STATE_NEW", aliasAs: "STATE" });
 });
 
 test("#79 a retyped column is rejected when a rewrite depends on its type, else warned", () => {

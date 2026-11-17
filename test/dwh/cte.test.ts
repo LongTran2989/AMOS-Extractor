@@ -132,6 +132,17 @@ test("#78 an approved rename prints NEW AS \"old\" in the select list", () => {
   const r = irOf("SELECT wp_header.station FROM wp_header WHERE wp_header.station = 'HAN'", {
     mapping: { columns: { "wp_header.station": { dwh: "STATION_CODE", keepOutputName: true } } },
   });
-  assert.deepEqual(r.q.branches[0]!.columns, [{ e: col("WP_HEADER", "STATION_CODE"), as: '"station"' }]);
+  // The alias is the name the DWH would report without the rename (upper case), so outputs match.
+  assert.deepEqual(r.q.branches[0]!.columns, [{ e: col("WP_HEADER", "STATION_CODE"), as: '"STATION"' }]);
   assert.deepEqual(r.q.branches[0]!.where, bin("=", col("WP_HEADER", "STATION_CODE"), str("HAN")));
+  assert.deepEqual(r.q.outputs, [{ name: "STATION", type: "text" }]);
+});
+
+test("#78 an approved rename inside a WITH keeps outer references to the unaliased column working", () => {
+  const r = irOf("WITH c AS (SELECT wp_header.station FROM wp_header) SELECT c.station FROM c WHERE c.station = 'HAN'", {
+    mapping: { columns: { "wp_header.station": { dwh: "STATION_CODE", keepOutputName: true } } },
+  });
+  // Inside the CTE the column is renamed back to STATION, which is what C.STATION refers to.
+  assert.deepEqual(r.q.with[0]!.q.branches[0]!.columns, [{ e: col("WP_HEADER", "STATION_CODE"), as: '"STATION"' }]);
+  assert.deepEqual(r.q.branches[0]!.columns, [{ e: col("C", "STATION") }]);
 });
