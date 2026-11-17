@@ -43,7 +43,7 @@ export interface RunHandle {
 }
 
 /** OPENQUERY refuses two result columns with the same name (Phase 0b, b7); it cannot be checked for * or unnamed formulas. */
-function checkOutputNames(conv: ConvertResult): void {
+export function checkOutputNames(conv: ConvertResult): void {
   const seen = new Set<string>();
   for (const o of conv.outputs) {
     if (o.name === "*") {

@@ -118,3 +118,27 @@ test("dwhConvert writes and removes files; dwhCheck reports hand edits, missing 
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test("with a catalogue, generateAll also writes docs/generated/dwh-schema-diff.md; without one it does not", () => {
+  const withCat = generateAll(ROOT, { cataloguePath: FIXTURE });
+  const md = withCat.get("docs/generated/dwh-schema-diff.md");
+  assert.ok(md, "diff file generated");
+  assert.match(md!, /\| error \| missing_table \| WP_STATUS \|/);
+  assert.match(md!, /truncation_risk \| WO_TEXT_DESCRIPTION \| TEXT_HTML/);
+  const without = generateAll(ROOT, { cataloguePath: path.join(ROOT, "no-such-catalogue.json") });
+  assert.equal(without.has("docs/generated/dwh-schema-diff.md"), false);
+});
+
+test("dwhCheck reports a stale schema diff file", () => {
+  const dir = tempRepo(["extract_all_parts.sql"]);
+  try {
+    copyFileSync(FIXTURE, path.join(dir, "dwh", "catalogue.json"));
+    dwhConvert(dir);
+    assert.deepEqual(dwhCheck(dir), []);
+    const p = path.join(dir, "docs", "generated", "dwh-schema-diff.md");
+    writeFileSync(p, readFileSync(p, "utf8").replace("Errors:", "Errorz:"));
+    assert.ok(dwhCheck(dir).some((x) => x.includes("dwh-schema-diff.md")));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

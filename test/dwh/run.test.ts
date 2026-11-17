@@ -1,79 +1,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { EventEmitter } from "node:events";
 import * as path from "node:path";
 import { loadModel } from "../../src/schema/load.ts";
 import { convertQuery, type ConvertResult } from "../../src/dwh/convert/index.ts";
 import { ConvertError } from "../../src/dwh/convert/errors.ts";
 import { ConfigMissing, dwhConfigFromEnv } from "../../src/dwh/db.ts";
-import { runConverted, type RelayPool } from "../../src/dwh/run.ts";
+import { runConverted } from "../../src/dwh/run.ts";
+import { fakePool, neverPool } from "./fakePool.ts";
 import { MAPPING, ROOT, csvIndex } from "./helpers.ts";
-
-/** Stand-in for an mssql streaming request: plays a script of columns and rows. */
-class FakeRequest extends EventEmitter {
-  stream = false;
-  arrayRowMode = false;
-  inputs: { name: string; value: unknown }[] = [];
-  sent?: string;
-  cancelled = false;
-  private columns: string[];
-  private rows: unknown[][];
-  private fail: Error | undefined;
-  constructor(columns: string[], rows: unknown[][], fail?: Error) {
-    super();
-    this.columns = columns;
-    this.rows = rows;
-    this.fail = fail;
-  }
-  input(name: string, _type: unknown, value: unknown) {
-    this.inputs.push({ name, value });
-    return this;
-  }
-  query(tsql: string) {
-    this.sent = tsql;
-    setImmediate(() => void this.play());
-  }
-  cancel() {
-    this.cancelled = true;
-    return true;
-  }
-  pause() {}
-  resume() {}
-  private async play() {
-    if (this.fail) {
-      this.emit("error", this.fail);
-      this.emit("done", {});
-      return;
-    }
-    this.emit("recordset", this.columns.map((name, index) => ({ index, name })));
-    for (const r of this.rows) {
-      if (this.cancelled) break;
-      this.emit("row", r);
-      await new Promise((res) => setImmediate(res));
-    }
-    if (this.cancelled) this.emit("error", Object.assign(new Error("Canceled."), { code: "ECANCEL" }));
-    this.emit("done", {});
-  }
-}
-
-function fakePool(columns: string[], rows: unknown[][], fail?: Error) {
-  const made: FakeRequest[] = [];
-  const pool: RelayPool & { made: FakeRequest[] } = {
-    made,
-    request: () => {
-      const r = new FakeRequest(columns, rows, fail);
-      made.push(r);
-      return r;
-    },
-  };
-  return pool;
-}
-
-const neverPool: RelayPool = {
-  request: () => {
-    throw new Error("the pool must not be used");
-  },
-};
 
 const conv = (over: Partial<ConvertResult> = {}): ConvertResult => ({
   pretty: "",
