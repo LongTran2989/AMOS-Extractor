@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Status:** Revision 2.1 (2026-11-17). Phases 0 and 0b done. **Conditional go:** Phase 1 (offline converter, no database) may start; **Phases 2–4 are gated** on re-running the b6 speed test with the closest real query the DWH can run (see Phase 0b and "Phase 0b findings"). **The six missing DWH tables cannot be added (decision 2026-11-17)**: workarounds or dropping some information are decided later, per query. Nothing in Phases 1–4 has been built.
+**Status:** Revision 2.1 (2026-11-17). Phases 0, 0b and 1 done. **The b6 re-test passed (2026-11-17, warm 1.4–1.6 s; see "Phase 0b findings")**, so Phase 2 may start. **The six missing DWH tables cannot be added (decision 2026-11-17)**: workarounds or dropping some information are decided later, per query. Phases 3–4 not started.
 
 **Revision history**
 - *Rev 1 (2026-11-17):* PostgreSQL → T-SQL converter, run as four-part linked-server queries on SQL Server.
@@ -791,6 +791,14 @@ All DWH probes were read-only `SELECT`s sent through `scripts/dwh.ts`; b10 and t
 | 6b: trimmed steps query, 7 tables, first 50 rows | 18.0 | 8.8 | 8.8 |
 
 Caveats: 6b had no status or department filter (those tables are missing in the DWH) and used a 6-month start-date window with a global `ORDER BY`; the real query is narrower in one way and untested in others. The first run of each is slower (cold cache on the Oracle side).
+
+**b6 re-test, the gate for Phase 2 (2026-11-17): passed.** Query: the `npm run dwh:convert` output of `extract_wp_seqs_steps.sql`, with only the seven tables the DWH has (`WP_STATUS`, `WP_DEPARTMENT_LINK` and their three columns and conditions removed), `WHERE WP_HEADER.WPNO = 'A501-091026-CHK-C04'`, the original `ORDER BY`, `FETCH FIRST 50 ROWS ONLY`, through `OPENQUERY`.
+
+| | Run 1 | Run 2 | Run 3 |
+|---|---|---|---|
+| Warm (seconds, incl. about 1 s Node start-up and login) | 1.6 | 1.6 | 1.4 |
+
+All runs returned the same 50 rows (19 columns, items 1.1.1, 1.1.2, 2.1.1, …). The cold run was **not measured**: the first three runs completed but their timing failed (a missing tool on the PC), and by then the workpack was cached. You accepted the warm numbers (option 1). The warm runs are about ten times under the 15 s limit; the earlier, much wider 6b query's cold run was 18 s, under the 30 s cold limit. One-workpack queries are fast; wide date windows without the department filter remain slower (6b).
 
 ## Proposed changes (all approved and applied, Rev 2.1; C3 = option (a))
 
