@@ -5,3 +5,5 @@ test_db.js
 archive/verification/*.csv
 /*.csv
 !/Database-Description-AMOS-csv.csv
+
+.env
