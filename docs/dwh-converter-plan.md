@@ -753,3 +753,46 @@ Probes 0.1–0.6 were read-only SELECTs and catalogue procedures run through `sc
 5. *Freshness.* → Accepted (A.7 #1, #5).
 6. *SQL Server 2016 limits.* → No longer relevant: SQL Server only relays.
 7. *AMOS `TimeZone` still open.* → Phase 0b b10.
+
+---
+
+# Phase 0b findings (2026-11-17)
+
+All DWH probes were read-only `SELECT`s sent through `scripts/dwh.ts`; b10 and the AMOS comparisons were run by you in AMOS. Values are recorded in `dwh/mapping.yaml`. **Nothing in the body of this plan has been changed; the proposals below wait for your OK.**
+
+## Results
+
+| Probe | Result | Effect on Rev 2 |
+|---|---|---|
+| b1 | `is_rpc_out_enabled = false`, `is_data_access_enabled = true` | `EXEC … AT` is not possible. `exec_mode: openquery` (see C1). |
+| b2 | Oracle Database 12c Enterprise Edition **12.2.0.1.0** | `FETCH FIRST n ROWS ONLY` and `OFFSET … ROWS` are allowed (#32, #34); `oracle_version: 12`. |
+| b3 | `NLS_COMP = BINARY`, `NLS_SORT = BINARY`; `NLS_CHARACTERSET = AL32UTF8`, `NLS_NCHAR_CHARACTERSET = AL16UTF16`; `DBTIMEZONE` and `SESSIONTIMEZONE` both `+07:00`; `SYS_EXTRACT_UTC(SYSTIMESTAMP)` returned the correct UTC time | As expected: text `=` is case-sensitive like PostgreSQL (#40, no `W_STRING_COMPARE`); no `W_MAYBE_LOST_UNICODE` (#80); `W_STRING_ORDER` stays because BINARY order differs from AMOS `en_US.UTF-8` (#38). The +07:00 clock does not matter because the converter uses `SYS_EXTRACT_UTC(SYSTIMESTAMP)` (A.4). |
+| b4 | Oracle user has `SET CONTAINER`, `CREATE DATABASE LINK`, `CREATE SESSION`; role `CONNECT` | No system-level write privileges. Rights granted on single tables are not shown by these views, so the app gates (A.8) remain the real protection. |
+| b5 | `SELECT WO_HEADER.EVENT_PERFNO_I FROM STG_AMOS.WO_HEADER WHERE ROWNUM <= 1` works | Form in #1 confirmed. |
+| b6 | See the speed table below | **Not a clean pass** (see C3). |
+| b7 | `OPENQUERY` refuses two output columns with the same name (SQL Server error 492). `EXEC … AT` not testable (b1) | In `openquery` mode `E_DUPLICATE_OUTPUT` applies (#11). |
+| b8 | `WO_TEXT_DESCRIPTION.TEXT_HTML` (and `TEXT`) are **`VARCHAR2(4000)`, not CLOB**. Across all of `STG_AMOS` only `VARCHAR2` (1122 columns, longest 4000) and `NUMBER` (877) exist: **no CLOB columns at all**. The three longest `TEXT_HTML` values (`DESCNO_I` 4430989, 4430990, 4340938) are all exactly 3700 characters in Oracle and arrive through the relay as 3700 characters (7400 bytes, `nvarchar`): nothing is lost between Oracle and the relay. Vietnamese text arrives intact (e.g. `DESCNO_I` 4296886 `BÌNH XỊT ĐI CAN VN512`, 21 characters / 25 bytes in Oracle) | See C2. Not compared with AMOS: the AMOS tool you use shows only some documents (e.g. 8802418, a real work order, is not found in `wo_text_description` there), so neither the Vietnamese rows nor the 3700 figure could be checked. Both stay **open**. |
+| b9 | Through the relay: Oracle `NUMBER` → `float`; `DATE '1971-12-31' + MUTATION` → `datetime2(7)`; `VARCHAR2(4000)` → `nvarchar(4000)` | The runner formats integers by the converter's output type (#85), which is needed because `float` is not exact above 2^53 (the current ids are about 7 digits, so this is a safeguard, not a present problem). |
+| b10 | AMOS: PostgreSQL 14.19, `TimeZone` = UTC | Confirms A.2 #5 and #19: `W_UTC_TODAY` assumption holds. `amos_collation: other` unchanged. |
+
+**b6 speed (seconds, each run includes about 1 s of Node start-up and login; a trivial `SELECT 1 FROM DUAL` takes under 1 s):**
+
+| Query (hand-written Oracle, through `OPENQUERY`) | Run 1 | Run 2 | Run 3 |
+|---|---|---|---|
+| 6a: `example_steps`, 4 tables, first 20 rows | 59 | 17.5 | 16.6 |
+| 6b: trimmed steps query, 7 tables, first 50 rows | 18.0 | 8.8 | 8.8 |
+
+Caveats: 6b had no status or department filter (those tables are missing in the DWH) and used a 6-month start-date window with a global `ORDER BY`; the real query is narrower in one way and untested in others. The first run of each is slower (cold cache on the Oracle side).
+
+## Proposed changes (not applied; need your OK)
+
+**C1. Run in `openquery` mode (RPC Out is off).** Consequences already in the plan as R18: no bound parameters (placeholder values are checked against `^[A-Za-z0-9 ._/-]{1,100}$` and refused otherwise), 8000-character limit (largest current query about 3.3 KB), duplicate output names refused. Proposal: build `openquery` first; ask the DWH administrator whether RPC Out can be turned on, which would remove these limits (a one-setting change on the relay).
+
+**C2. There are no CLOB columns; text is `VARCHAR2(4000)`.** Rows #65 (`E_TEXT_COLUMN`) and #66 (`textsize`, CLOB length comparison) do not apply and the runner's `textsize` setting is irrelevant; the schema-diff rule `text` ↔ `VARCHAR2(4000)` is **`truncation_risk`**, and it is now a live risk because three longest values tie at exactly 3700. Proposal: keep #65 as dormant code only if cheap, otherwise drop it; keep `truncation_risk` as a visible warning on every query that selects a `text`-typed column; make A.7's compare report text-length differences prominently; and ask the DWH administrator whether the copy truncates long text. A second consequence: because the AMOS tool shows only some documents, the fixed keys in `dwh/verify-keys.yaml` (A.7 #2) must be chosen from documents visible in AMOS.
+
+**C3. b6 did not pass cleanly, so by the plan's own rule Phase 1 may not start yet.** Pass-through is far faster than the old four-part form (the steps-style query dropped from a 120 s timeout to 9–18 s), but the cold run was 18 s (over the 15 s limit) and the 4-table example stays at 17 s even when warm. Options:
+  - **(a) Conditional go (recommended).** Phase 1 is the offline converter and needs no database; start it. Re-run the b6 steps query once the missing tables (`WP_STATUS`, `WP_DEPARTMENT_LINK`) exist in the DWH, and make that re-run the gate for Phase 2 (the runner and page). Meanwhile ask the administrator about indexes and statistics on the join columns, since single round trips are fast and the time is spent inside Oracle.
+  - **(b) Stop** until the administrator has looked at the Oracle side, as the plan says.
+  - **(c) Loosen the limit** (for example "under 30 s warm") and proceed with everything. I don't recommend it without knowing how people will use the page.
+
+**C4. The six missing tables are still missing** (`wp_status`, `wp_department_link`, `cml_reference`, `oem_doc_partno`, `taskcard_coversheet_info`, `time_captured_history`). Unchanged from Phase 0; Part C's request to the administrator now has three items: the six tables, RPC Out, and the speed/truncation questions above.
