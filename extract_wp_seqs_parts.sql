@@ -4,7 +4,7 @@
 -- The WP filter sits in an EXISTS so each part request appears exactly once, even when the same
 -- work order is listed more than once for the WP (joining through the WP tables would repeat the
 -- part rows, and the stitcher would then multiply them by the repeated step rows).
--- Keep the WP filter in sync with extract_wp_seqs_steps.sql (station/department/windows).
+-- Keep the WP filter in sync with extract_wp_seqs_steps.sql (department/windows).
 
 SELECT 
     workstep_link.workstep_linkno_i AS z_WORKSTEP_LINK_ID,
@@ -27,7 +27,6 @@ WHERE part_request_2.event_type = 'WSL'
       JOIN wo_header 
              ON wo_header.event_perfno_i = wp_assignment.event_perfno_i
       WHERE wo_header.event_perfno_i = workstep_link.event_perfno_i
-        AND wp_header.station = 'HAN'
         AND wp_department_link.department = 'NTHN'
         AND (
             -- Condition 1: In Progress or Issued in the last 6 months

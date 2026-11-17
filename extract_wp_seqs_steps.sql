@@ -57,8 +57,7 @@ LEFT JOIN workstep_link
        ON workstep_link.event_perfno_i = wo_header.event_perfno_i
 LEFT JOIN wo_text_description
        ON wo_text_description.descno_i = workstep_link.descno_i
-WHERE wp_header.station = 'HAN'
-  AND wp_department_link.department = 'NTHN'
+WHERE wp_department_link.department = 'NTHN'
   AND (
       -- Condition 1: In Progress or Issued in the last 6 months
       (

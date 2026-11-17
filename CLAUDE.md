@@ -15,7 +15,7 @@ Node >= 24 (TypeScript is run directly via `node src/cli.ts`, no build step).
 - `npm run typecheck` — `tsc --noEmit`
 - `npm run check` — typecheck + test + validate + docs:check
 - `npm test` globs `test/**/*.test.ts`, but no `test/` directory exists yet. Single test: `node --test test/path/file.test.ts`.
-- `npm run scaffold` — renders `queries/wp_seqs/<STATION>-<DEPT>_{steps,parts}.sql` from the root `extract_wp_seqs_{steps,parts}.sql` templates and `queries/wp_seqs/pairs.json`. Edit the templates, never the generated files.
+- `npm run scaffold` — renders `queries/wp_seqs/<DEPT>_{steps,parts}.sql` from the root `extract_wp_seqs_{steps,parts}.sql` templates and `queries/wp_seqs/pairs.json`. Edit the templates, never the generated files.
 - `npm run stitch -- steps.csv parts.csv out.csv` rebuilds the flat WP-sequences output from the split queries; `npm run stitch:compare -- legacy.csv [more.csv] stitched.csv` checks it. See [docs/wp-seqs-split-extraction.md](docs/wp-seqs-split-extraction.md).
 - `npm run docs:check` currently regenerates the docs instead of only checking (the script passes `--check`, the CLI expects the `docs:check` command).
 

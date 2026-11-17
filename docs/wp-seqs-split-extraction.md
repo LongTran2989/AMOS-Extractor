@@ -17,12 +17,12 @@ The split queries return the same data without the multiplication:
 
 `extract_wp_seqs_parameterized.sql` stays as the reference output. The consuming app expects the **flat** shape, so the CLI rebuilds it from A + B.
 
-## Station-department pairs
+## Departments
 
-`queries/wp_seqs/pairs.json` lists the pairs; `npm run scaffold` renders `<STATION>-<DEPT>_steps.sql` and `_parts.sql` into `queries/wp_seqs/` from the root templates
-(`extract_wp_seqs_steps.sql`, `extract_wp_seqs_parts.sql`, which stay HAN/NTHN). **Edit the root templates, then re-run scaffold; never edit the generated files.**
+`queries/wp_seqs/pairs.json` lists the departments (no station filter: a department is queried across all stations); `npm run scaffold` renders `<DEPT>_steps.sql` and `_parts.sql` into `queries/wp_seqs/` from the root templates
+(`extract_wp_seqs_steps.sql`, `extract_wp_seqs_parts.sql`, which stay on department NTHN). **Edit the root templates, then re-run scaffold; never edit the generated files.**
 
-Current pairs: HAN-NTHN, HAN-NGTHN, HAN-CNBDNT, DAD-CNDN, SGN-NTHCM, SGN-NGTHCM, SGN-CNBDNT.
+Current departments: NTHN, NGTHN, BDNTH, CNKVMT, NTHCM, NGTHCM. (BDNTH replaces CNBDNT, which was split across HAN and SGN; CNKVMT replaces CNDN.)
 `npm run validate` lints the generated files too. The department codes are as given by the user; they have not been checked against the live DB.
 
 ## Running it

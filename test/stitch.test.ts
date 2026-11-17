@@ -47,11 +47,10 @@ test("compareTables ignores export formatting but not real value changes", () =>
 
 import { renderPair } from "../src/scaffold/wpSeqs.ts";
 
-test("renderPair swaps station and department and refuses a template without the HAN/NTHN lines", () => {
-  const t = "WHERE wp_header.station = 'HAN'\n  AND wp_department_link.department = 'NTHN'\n";
-  const out = renderPair(t, { station: "SGN", department: "NGTHCM" }, "steps");
-  assert.match(out, /station = 'SGN'/);
+test("renderPair swaps the department and refuses a template without the NTHN line", () => {
+  const t = "WHERE wp_department_link.department = 'NTHN'\n";
+  const out = renderPair(t, { department: "NGTHCM" }, "steps");
   assert.match(out, /department = 'NGTHCM'/);
-  assert.doesNotMatch(out, /'HAN'|'NTHN'/);
-  assert.throws(() => renderPair("SELECT 1", { station: "SGN", department: "X" }, "parts"));
+  assert.doesNotMatch(out, /station|'NTHN'/);
+  assert.throws(() => renderPair("SELECT 1", { department: "X" }, "parts"));
 });

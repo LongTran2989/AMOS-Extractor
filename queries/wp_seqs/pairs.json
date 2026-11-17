@@ -1,9 +1,8 @@
 [
-  { "station": "HAN", "department": "NTHN" },
-  { "station": "HAN", "department": "NGTHN" },
-  { "station": "HAN", "department": "CNBDNT" },
-  { "station": "DAD", "department": "CNDN" },
-  { "station": "SGN", "department": "NTHCM" },
-  { "station": "SGN", "department": "NGTHCM" },
-  { "station": "SGN", "department": "CNBDNT" }
+  { "department": "NTHN" },
+  { "department": "NGTHN" },
+  { "department": "BDNTH" },
+  { "department": "CNKVMT" },
+  { "department": "NTHCM" },
+  { "department": "NGTHCM" }
 ]
