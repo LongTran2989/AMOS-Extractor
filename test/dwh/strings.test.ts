@@ -27,6 +27,24 @@ test("#40 W_STRING_COMPARE under NLS_COMP = LINGUISTIC; W_CHAR_PADDED for a CHAR
   assert.deepEqual(where("wp_header.wpno = 'A'", { catalogue: cat }).codes, ["W_CHAR_PADDED"]);
 });
 
+test("text <, >, <=, >=, BETWEEN warn W_STRING_ORDER (AMOS en_US order vs DWH character-code order)", () => {
+  assert.ok(where("wp_header.wpno > 'a'").codes.includes("W_STRING_ORDER"));
+  assert.ok(where("wp_header.wpno <= 'a'").codes.includes("W_STRING_ORDER"));
+  assert.ok(where("wp_header.wpno BETWEEN 'A' AND 'z'").codes.includes("W_STRING_ORDER"));
+  assert.ok(!where("wp_header.start_date > 5").codes.includes("W_STRING_ORDER"));
+  assert.ok(!where("wp_header.wpno > 'a'", { mapping: { amosCollation: "C" } }).codes.includes("W_STRING_ORDER"));
+});
+
+test("#42 W_EMPTY_IS_NULL also for <>, NOT IN, NOT LIKE, text ranges and COALESCE/NULLIF on text", () => {
+  for (const c of ["wp_header.wpno <> 'x'", "wp_header.wpno NOT IN ('x')", "wp_header.wpno NOT LIKE 'x%'", "wp_header.wpno < 'x'", "COALESCE(wp_header.wpno, 'x') = 'x'", "NULLIF(wp_header.wpno, 'x') IS NULL"]) {
+    assert.ok(where(c).codes.includes("W_EMPTY_IS_NULL"), c);
+  }
+  // Equality and IN on text drop '' rows on both sides alike.
+  assert.ok(!where("wp_header.wpno = 'x'").codes.includes("W_EMPTY_IS_NULL"));
+  assert.ok(!where("wp_header.wpno IN ('x')").codes.includes("W_EMPTY_IS_NULL"));
+  assert.ok(!where("wp_header.start_date <> 1").codes.includes("W_EMPTY_IS_NULL"));
+});
+
 test("#41 an empty string literal is rejected E_EMPTY_STRING", () => {
   assert.equal(rejects(() => where("wp_header.wpno = ''")).code, "E_EMPTY_STRING");
   assert.equal(rejects(() => irOf("SELECT COALESCE(wp_header.wpno, '') FROM wp_header")).code, "E_EMPTY_STRING");

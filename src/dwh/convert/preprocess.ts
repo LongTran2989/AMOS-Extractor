@@ -62,6 +62,10 @@ export function preprocess(source: string): { sql: string; placeholders: string[
       }
     }
     if (t.kind === "string") {
+      // AMOS keeps a backslash literally (standard_conforming_strings); node-sql-parser would decode \t, \n, \\.
+      if (t.text.includes("\\")) {
+        throw new ConvertError("E_UNSUPPORTED", "Text in quotes that contains a backslash (\\) is not supported: it would not be read exactly as AMOS reads it.", "", locAt(text, t.offset));
+      }
       out.push(
         t.text.replace(PLACEHOLDER, (_m, name: string) => {
           if (!placeholders.includes(name)) placeholders.push(name);

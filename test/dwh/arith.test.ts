@@ -20,6 +20,12 @@ test("#51 division involving numeric passes through with W_DECIMAL_SCALE", () =>
   assert.equal(rejects(() => exprIr("NULL / 2")).code, "E_TYPE_UNKNOWN");
 });
 
+test("EXTRACT is numeric in PostgreSQL 14, so dividing it is not integer division", () => {
+  const r = exprIr("EXTRACT(MONTH FROM (DATE '1971-12-31' + wp_header.start_date)) / 3");
+  assert.equal(r.e.k, "bin");
+  assert.ok(r.codes.includes("W_DECIMAL_SCALE"));
+});
+
 test("#52 bit, JSON and other operators are rejected", () => {
   for (const op of ["^", "&", "|", "#", "<<", ">>", "->", "->>", "@>"]) {
     assert.equal(rejects(() => exprIr(`wp_header.start_date ${op} 2`)).code, "E_UNSUPPORTED", op);

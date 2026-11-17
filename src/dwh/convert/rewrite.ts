@@ -22,7 +22,20 @@ const unquote = (name: string) => (name.startsWith('"') ? name.slice(1, -1).repl
 function sortNote(t: SqlType, ctx: RewriteCtx) {
   const sameOrder = ctx.mapping.amosCollation === "C" && ctx.mapping.nlsSort.toUpperCase() === "BINARY";
   if (t === "text" && !sameOrder) {
-    addWarning(ctx.warnings, { code: "W_STRING_ORDER", plain: "Text sorts may differ slightly from AMOS (the DWH sorts text by character code)." });
+    addWarning(ctx.warnings, {
+      code: "W_STRING_ORDER",
+      plain: "Text sorts, and text comparisons with <, >, BETWEEN, may differ slightly from AMOS (the DWH orders text by character code).",
+    });
+  }
+}
+
+/** '' in AMOS is NULL in Oracle: these text operations can then match different rows (#42). */
+function emptyNote(sides: PgExpr[], scope: ScopeInfo, ctx: RewriteCtx) {
+  if (sides.some((s) => s && inferType(s, scope) === "text")) {
+    addWarning(ctx.warnings, {
+      code: "W_EMPTY_IS_NULL",
+      plain: "Text that is empty ('') in AMOS is NULL in the DWH, so IS NULL, <>, NOT IN, NOT LIKE, text ranges and COALESCE/NULLIF on text can match different rows.",
+    });
   }
 }
 
@@ -153,21 +166,22 @@ function binaryIr(expr: PgExpr, scope: ScopeInfo, ctx: RewriteCtx): IrExpr {
     case "IS":
     case "IS NOT":
       if (r?.type !== "null") failAt(ctx, expr, "E_UNSUPPORTED", `${op} is only supported with NULL.`);
-      if (inferType(l, scope) === "text") {
-        addWarning(ctx.warnings, { code: "W_EMPTY_IS_NULL", plain: "Text that is empty ('') in AMOS is NULL in the DWH, so IS NULL / IS NOT NULL can match different rows." });
-      }
+      emptyNote([l], scope, ctx);
       return { k: "isnull", not: op === "IS NOT", e: R(l) };
     case "IN":
     case "NOT IN": {
       const vals: PgExpr[] = r?.value ?? [];
       if (vals.length === 1 && isSubquery(vals[0])) return { k: "in_sub", not: op === "NOT IN", e: R(l), q: queryIr(vals[0].ast, scope, ctx, false) };
       compareNote([l, ...vals], scope, ctx);
+      if (op === "NOT IN") emptyNote([l], scope, ctx);
       return { k: "in", not: op === "NOT IN", e: R(l), list: vals.map(R) };
     }
     case "BETWEEN":
     case "NOT BETWEEN": {
       const [lo, hi] = r?.value ?? [];
       compareNote([l, lo, hi], scope, ctx);
+      sortNote(inferType(l, scope), ctx);
+      if (op === "NOT BETWEEN") emptyNote([l], scope, ctx);
       return { k: "between", not: op === "NOT BETWEEN", e: R(l), lo: R(lo), hi: R(hi) };
     }
     case "LIKE":
@@ -178,6 +192,7 @@ function binaryIr(expr: PgExpr, scope: ScopeInfo, ctx: RewriteCtx): IrExpr {
       if (String(r.value).includes("\\")) failAt(ctx, expr, "E_UNSUPPORTED", "A LIKE pattern with a backslash (\\) is not supported: AMOS treats it as an escape, the DWH does not.");
       compareNote([l], scope, ctx);
       const not = op.startsWith("NOT");
+      if (not) emptyNote([l], scope, ctx);
       if (op.endsWith("ILIKE")) return { k: "like", not, e: fn("LOWER", R(l)), pat: fn("LOWER", R(r)) };
       return { k: "like", not, e: R(l), pat: R(r) };
     }
@@ -207,6 +222,8 @@ function binaryIr(expr: PgExpr, scope: ScopeInfo, ctx: RewriteCtx): IrExpr {
           return { k: "any", op: op === "!=" ? "<>" : op, e: R(l), q: queryIr(sub.ast, scope, ctx, false) };
         }
         compareNote([l, r], scope, ctx);
+        if (op !== "=") emptyNote([l, r], scope, ctx);
+        if (op !== "=" && op !== "<>" && op !== "!=") sortNote([l, r].some((s) => inferType(s, scope) === "text") ? "text" : "int", ctx);
         return bin(op === "!=" ? "<>" : op, R(l), R(r));
       }
       return failAt(ctx, expr, "E_UNSUPPORTED", `The operator ${expr.operator} is not supported by the DWH converter.`);
@@ -244,6 +261,7 @@ export function rewriteExpr(expr: PgExpr, scope: ScopeInfo, ctx: RewriteCtx): Ir
       const name = functionName(expr);
       const args: PgExpr[] = expr.args?.value ?? [];
       if (name === "EXISTS") return { k: "exists", not: false, q: queryIr(args[0].ast, scope, ctx, false) };
+      if (name === "COALESCE" || name === "NULLIF") emptyNote(args, scope, ctx);
       if (["COALESCE", "NULLIF", "LOWER", "UPPER", "ABS"].includes(name)) return fn(name, ...args.map(R));
       return failAt(ctx, expr, "E_UNSUPPORTED_FUNCTION", `The function ${name} is not supported by the DWH converter.`);
     }
@@ -332,6 +350,16 @@ function queryIr(node: PgNode, scope: ScopeInfo, ctx: RewriteCtx, top: boolean):
   const chain: PgNode[] = [];
   for (let b: PgNode = node; b; b = b._next) chain.push(b);
   const ops = chain.slice(0, -1).map((b) => SET_OP_NAMES[String(b.set_op).toLowerCase()]!);
+  if (ops.includes("INTERSECT") && ops.some((o) => o !== "INTERSECT")) {
+    // PostgreSQL binds INTERSECT tighter than UNION/EXCEPT; Oracle reads all set operators left to right.
+    failAt(ctx, node, "E_UNSUPPORTED", "INTERSECT mixed with UNION or EXCEPT is not supported (AMOS and the DWH would group them differently). Split the query or use WITH.");
+  }
+  const hasStar = (node.columns ?? []).some((c: PgNode) => c.expr?.type === "column_ref" && c.expr.column === "*");
+  const noPositionsWithStar = (e: PgExpr) => {
+    if (hasStar && e?.type === "number") failAt(ctx, e, "E_UNSUPPORTED", "ORDER BY / GROUP BY by position is not supported when the select list has *; name the column instead.");
+  };
+  for (const o of chain[chain.length - 1]!.orderby ?? []) noPositionsWithStar(o.expr);
+  for (const g of node.groupby?.columns ?? []) noPositionsWithStar(g);
   const outs = chain.map((b, i) => selectIr(b, scope, ctx, top && i === 0));
   const first = outs[0]!;
   const last = chain[chain.length - 1]!;

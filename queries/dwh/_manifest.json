@@ -15,7 +15,7 @@
       "warnings": [
         {
           "code": "W_STRING_ORDER",
-          "plain": "Text sorts may differ slightly from AMOS (the DWH sorts text by character code)."
+          "plain": "Text sorts, and text comparisons with <, >, BETWEEN, may differ slightly from AMOS (the DWH orders text by character code)."
         },
         {
           "code": "W_NO_CATALOGUE",
@@ -270,6 +270,14 @@
       "available": "unknown",
       "missing": [],
       "warnings": [
+        {
+          "code": "W_EMPTY_IS_NULL",
+          "plain": "Text that is empty ('') in AMOS is NULL in the DWH, so IS NULL, <>, NOT IN, NOT LIKE, text ranges and COALESCE/NULLIF on text can match different rows."
+        },
+        {
+          "code": "W_STRING_ORDER",
+          "plain": "Text sorts, and text comparisons with <, >, BETWEEN, may differ slightly from AMOS (the DWH orders text by character code)."
+        },
         {
           "code": "W_NO_CATALOGUE",
           "plain": "No DWH catalogue snapshot yet: names are upper case and availability is unknown (refresh with npm run dwh:catalogue)."
@@ -752,7 +760,7 @@
       "warnings": [
         {
           "code": "W_STRING_ORDER",
-          "plain": "Text sorts may differ slightly from AMOS (the DWH sorts text by character code)."
+          "plain": "Text sorts, and text comparisons with <, >, BETWEEN, may differ slightly from AMOS (the DWH orders text by character code)."
         },
         {
           "code": "W_NO_CATALOGUE",
@@ -1023,7 +1031,7 @@
       "warnings": [
         {
           "code": "W_STRING_ORDER",
-          "plain": "Text sorts may differ slightly from AMOS (the DWH sorts text by character code)."
+          "plain": "Text sorts, and text comparisons with <, >, BETWEEN, may differ slightly from AMOS (the DWH orders text by character code)."
         },
         {
           "code": "W_NO_CATALOGUE",
@@ -1098,7 +1106,7 @@
         },
         {
           "code": "W_STRING_ORDER",
-          "plain": "Text sorts may differ slightly from AMOS (the DWH sorts text by character code)."
+          "plain": "Text sorts, and text comparisons with <, >, BETWEEN, may differ slightly from AMOS (the DWH orders text by character code)."
         },
         {
           "code": "W_NO_CATALOGUE",
@@ -1327,7 +1335,7 @@
         },
         {
           "code": "W_STRING_ORDER",
-          "plain": "Text sorts may differ slightly from AMOS (the DWH sorts text by character code)."
+          "plain": "Text sorts, and text comparisons with <, >, BETWEEN, may differ slightly from AMOS (the DWH orders text by character code)."
         },
         {
           "code": "W_NO_CATALOGUE",
@@ -1485,7 +1493,7 @@
         },
         {
           "code": "W_STRING_ORDER",
-          "plain": "Text sorts may differ slightly from AMOS (the DWH sorts text by character code)."
+          "plain": "Text sorts, and text comparisons with <, >, BETWEEN, may differ slightly from AMOS (the DWH orders text by character code)."
         },
         {
           "code": "W_NO_CATALOGUE",
@@ -1726,7 +1734,7 @@
         },
         {
           "code": "W_STRING_ORDER",
-          "plain": "Text sorts may differ slightly from AMOS (the DWH sorts text by character code)."
+          "plain": "Text sorts, and text comparisons with <, >, BETWEEN, may differ slightly from AMOS (the DWH orders text by character code)."
         },
         {
           "code": "W_NO_CATALOGUE",
@@ -2394,7 +2402,7 @@
         },
         {
           "code": "W_STRING_ORDER",
-          "plain": "Text sorts may differ slightly from AMOS (the DWH sorts text by character code)."
+          "plain": "Text sorts, and text comparisons with <, >, BETWEEN, may differ slightly from AMOS (the DWH orders text by character code)."
         },
         {
           "code": "W_NO_CATALOGUE",
@@ -2612,7 +2620,7 @@
         },
         {
           "code": "W_STRING_ORDER",
-          "plain": "Text sorts may differ slightly from AMOS (the DWH sorts text by character code)."
+          "plain": "Text sorts, and text comparisons with <, >, BETWEEN, may differ slightly from AMOS (the DWH orders text by character code)."
         },
         {
           "code": "W_NO_CATALOGUE",
@@ -2830,7 +2838,7 @@
         },
         {
           "code": "W_STRING_ORDER",
-          "plain": "Text sorts may differ slightly from AMOS (the DWH sorts text by character code)."
+          "plain": "Text sorts, and text comparisons with <, >, BETWEEN, may differ slightly from AMOS (the DWH orders text by character code)."
         },
         {
           "code": "W_NO_CATALOGUE",
@@ -3048,7 +3056,7 @@
         },
         {
           "code": "W_STRING_ORDER",
-          "plain": "Text sorts may differ slightly from AMOS (the DWH sorts text by character code)."
+          "plain": "Text sorts, and text comparisons with <, >, BETWEEN, may differ slightly from AMOS (the DWH orders text by character code)."
         },
         {
           "code": "W_NO_CATALOGUE",
@@ -3266,7 +3274,7 @@
         },
         {
           "code": "W_STRING_ORDER",
-          "plain": "Text sorts may differ slightly from AMOS (the DWH sorts text by character code)."
+          "plain": "Text sorts, and text comparisons with <, >, BETWEEN, may differ slightly from AMOS (the DWH orders text by character code)."
         },
         {
           "code": "W_NO_CATALOGUE",
@@ -3484,7 +3492,7 @@
         },
         {
           "code": "W_STRING_ORDER",
-          "plain": "Text sorts may differ slightly from AMOS (the DWH sorts text by character code)."
+          "plain": "Text sorts, and text comparisons with <, >, BETWEEN, may differ slightly from AMOS (the DWH orders text by character code)."
         },
         {
           "code": "W_NO_CATALOGUE",

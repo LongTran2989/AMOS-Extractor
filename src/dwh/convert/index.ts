@@ -83,6 +83,7 @@ export function selfCheck(exec: string): void {
     }
     if (t.kind === "nstring") out.push(t.text.slice(1));
     else if (w === "MINUS") out.push("EXCEPT");
+    else if (w === "NUMBER" && sig(0)?.kind === "symbol" && sig(0)?.text === "(") out.push("NUMERIC");
     else out.push(t.text);
   }
   const text = out.join("");

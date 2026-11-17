@@ -72,7 +72,7 @@ export function inferType(expr: PgExpr, scope: ScopeInfo): SqlType {
     case "cast":
       return castTargetType(String(expr.target?.[0]?.dataType ?? ""));
     case "extract":
-      return "int";
+      return "numeric"; // PostgreSQL 14 EXTRACT returns numeric (AMOS runs 14.19)
     case "unary_expr":
       return expr.operator === "-" || expr.operator === "+" ? inferType(expr.expr, scope) : "unknown";
     case "function": {

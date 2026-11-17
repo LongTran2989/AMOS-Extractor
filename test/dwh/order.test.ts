@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { col, type IrExpr } from "../../src/dwh/convert/ir.ts";
-import { irOf, readSource } from "./helpers.ts";
+import { irOf, readSource, rejects } from "./helpers.ts";
 
 const WPNO = col("WP_HEADER", "WPNO");
 const SD = col("WP_HEADER", "START_DATE");
@@ -41,6 +41,11 @@ test("#37 ORDER BY alias or ordinal is resolved to the select expression", () =>
   assert.deepEqual(a.q.orderKeys, ["z_WP_NO", "START_DATE"]);
   const u = irOf("SELECT wp_header.wpno AS z_WP_NO FROM wp_header UNION ALL SELECT wp_header.description FROM wp_header ORDER BY z_WP_NO");
   assert.deepEqual(u.q.orderBy, [{ e: { k: "ordinal", n: 1 } as IrExpr, desc: false, nulls: "LAST" }]);
+});
+
+test("#37 / #57 a position in ORDER BY or GROUP BY next to * is rejected (* expands to many columns)", () => {
+  assert.equal(rejects(() => irOf("SELECT wp_header.*, wp_header.station AS z_WP_STATION FROM wp_header ORDER BY 2")).code, "E_UNSUPPORTED");
+  assert.equal(rejects(() => irOf("SELECT wp_header.*, COUNT(*) FROM wp_header GROUP BY 1")).code, "E_UNSUPPORTED");
 });
 
 test("#38 text sort keys warn W_STRING_ORDER; number keys do not", () => {

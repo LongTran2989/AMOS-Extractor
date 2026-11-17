@@ -57,6 +57,15 @@ test("#64 UNION [ALL] and INTERSECT pass through; EXCEPT becomes MINUS", () => {
   assert.deepEqual(two("EXCEPT"), ["MINUS"]);
 });
 
+test("#64 INTERSECT mixed with UNION/EXCEPT is rejected (PostgreSQL binds INTERSECT tighter, Oracle reads left to right)", () => {
+  const a = "SELECT wp_header.wpno_i FROM wp_header";
+  const b = "SELECT wp_sequence.wpno_i FROM wp_sequence";
+  assert.equal(rejects(() => irOf(`${a} UNION ${b} INTERSECT ${b}`)).code, "E_UNSUPPORTED");
+  assert.equal(rejects(() => irOf(`${a} INTERSECT ${b} EXCEPT ${b}`)).code, "E_UNSUPPORTED");
+  assert.deepEqual(irOf(`${a} INTERSECT ${b} INTERSECT ${b}`).q.ops, ["INTERSECT", "INTERSECT"]);
+  assert.deepEqual(irOf(`${a} UNION ${b} EXCEPT ${b}`).q.ops, ["UNION", "MINUS"]);
+});
+
 test("joins keep their kind and their ON condition", () => {
   const r = irOf("SELECT wp_header.wpno FROM wp_header LEFT JOIN wp_sequence ON wp_sequence.wpno_i = wp_header.wpno_i JOIN wo_header ON wo_header.event_perfno_i = wp_sequence.event_perfno_i");
   assert.deepEqual(r.q.branches[0]!.from, [

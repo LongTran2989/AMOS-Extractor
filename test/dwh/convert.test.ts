@@ -92,6 +92,15 @@ test("#83 openquery mode: exec text over 8000 chars after quote doubling throws 
   assert.equal(rejects(() => convertQuery(`SELECT wp_header.wpno_i AS z_WP_ID FROM wp_header WHERE wp_header.wpno IN (${near})`, "t.sql", opts)).code, "E_TOO_LONG");
 });
 
+test("#28 / #29 number casts go through the whole pipeline (self-check included)", () => {
+  assert.match(whereOf("wp_header.start_date::integer = 1"), /^\(CAST\(WP_HEADER\.START_DATE AS NUMBER\(10\)\) = 1\)$/);
+  assert.match(whereOf("wp_header.start_date::bigint = 1"), /NUMBER\(19\)/);
+  assert.match(whereOf("wp_header.start_date::smallint = 1"), /NUMBER\(5\)/);
+  assert.match(whereOf("wp_header.start_date::numeric(10,2) = 1"), /CAST\(WP_HEADER\.START_DATE AS NUMBER\(10,2\)\)/);
+  assert.match(whereOf("CAST(wp_header.start_date AS numeric(12)) = 1"), /NUMBER\(12\)/);
+  assert.match(whereOf("DATE '1971-12-31' + wp_header.start_date::integer = CURRENT_DATE"), /NUMBER\(10\)/);
+});
+
 test("#21 date-typed outputs are reported as date", () => {
   const r = convertQuery("SELECT wp_header.wpno_i AS z_WP_ID, wp_header.start_date AS z_WP_START_DATE FROM wp_header", "t.sql", opts);
   assert.deepEqual(r.outputs, [

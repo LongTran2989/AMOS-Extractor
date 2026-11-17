@@ -3,7 +3,7 @@
 -- Source: extract_parts_standalone_no_cml_no_alternate.sql  sha256:55a3a8c55375
 -- Converter: 2   Catalogue snapshot: none
 -- Available in the DWH: unknown (no catalogue snapshot yet)
--- Warning W_STRING_ORDER: Text sorts may differ slightly from AMOS (the DWH sorts text by character code).
+-- Warning W_STRING_ORDER: Text sorts, and text comparisons with <, >, BETWEEN, may differ slightly from AMOS (the DWH orders text by character code).
 -- Warning W_NO_CATALOGUE: No DWH catalogue snapshot yet: names are upper case and availability is unknown (refresh with npm run dwh:catalogue).
 
 SELECT

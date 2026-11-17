@@ -47,6 +47,13 @@ test("E-string, U&-string and dollar quoting throw E_UNSUPPORTED", () => {
   assert.equal(code(() => preprocess("SELECT $tag$x$tag$ FROM t")), "E_UNSUPPORTED");
 });
 
+test("a backslash in a string literal is rejected (the parser would decode \\t, AMOS keeps it literally)", () => {
+  assert.equal(code(() => preprocess("SELECT t.a FROM t WHERE t.b = 'a\\tb'")), "E_UNSUPPORTED");
+  assert.equal(code(() => preprocess("SELECT t.a FROM t WHERE t.b = 'c:\\\\x'")), "E_UNSUPPORTED");
+  // A backslash in a comment is fine.
+  assert.doesNotThrow(() => preprocess("-- a\\b\nSELECT t.a FROM t"));
+});
+
 test("an error carries the source line and column", () => {
   try {
     preprocess("SELECT t.a\nFROM t\nWHERE t.b = <X>");
