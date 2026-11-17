@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Status:** Revision 2.1 (2026-11-17). Phases 0 and 0b done. **Conditional go:** Phase 1 (offline converter, no database) may start; **Phases 2–4 are gated** on re-running the b6 speed test with the real steps query once `WP_STATUS` and `WP_DEPARTMENT_LINK` exist in the DWH (see Phase 0b and "Phase 0b findings"). Nothing in Phases 1–4 has been built.
+**Status:** Revision 2.1 (2026-11-17). Phases 0 and 0b done. **Conditional go:** Phase 1 (offline converter, no database) may start; **Phases 2–4 are gated** on re-running the b6 speed test with the closest real query the DWH can run (see Phase 0b and "Phase 0b findings"). **The six missing DWH tables cannot be added (decision 2026-11-17)**: workarounds or dropping some information are decided later, per query. Nothing in Phases 1–4 has been built.
 
 **Revision history**
 - *Rev 1 (2026-11-17):* PostgreSQL → T-SQL converter, run as four-part linked-server queries on SQL Server.
@@ -382,7 +382,7 @@ Read-only. I run the DWH ones through `scripts/dwh.ts` after you approve each (e
 
 **Outcome (2026-11-17): all probes done, results in "Phase 0b findings". b6 was not a clean pass; conditional go approved: Phase 1 may start now; Phases 2–4 wait for the b6 re-test below.**
 
-**b6 re-test (gate for Phase 2):** once `WP_STATUS` and `WP_DEPARTMENT_LINK` exist in the DWH, run the real steps query (department filter and status filter, first 50 rows) through `OPENQUERY`, three runs. Pass = first rows in under 15 s on at least the warm runs and under 30 s cold. If it fails, take the numbers to the DWH administrator (indexes and statistics on the join columns) before building Phase 2.
+**b6 re-test (gate for Phase 2):** the missing tables will not be added, so do not wait for them. Run the closest real steps query the DWH can run (all seven existing tables, the narrowest filter available such as one workpack number or a short date window, first 50 rows) through `OPENQUERY`, three runs. Pass = first rows in under 15 s on at least the warm runs and under 30 s cold. If it fails, take the numbers to the DWH administrator (indexes and statistics on the join columns) before building Phase 2.
 
 - [x] **b1 RPC Out:** `SELECT is_rpc_out_enabled, is_data_access_enabled FROM sys.servers WHERE name = 'DWH_DB'` → `exec_at` possible?
 - [x] **b2 Oracle version:** `SELECT * FROM OPENQUERY([DWH_DB], 'SELECT BANNER FROM V$VERSION')` (fallback `PRODUCT_COMPONENT_VERSION`) → `oracle_version`.
@@ -542,7 +542,7 @@ Read-only. I run the DWH ones through `scripts/dwh.ts` after you approve each (e
 
 ## Phase 2 — Runner, catalogue, schema diff
 
-> **Gate:** do not start until the b6 re-test (Phase 0b) has passed with the real steps query. Phase 1 has no such dependency. Build the `openquery` path first; keep `exec_at` behind `exec_mode` (RPC Out is off today).
+> **Gate:** do not start until the b6 re-test (Phase 0b) has passed with the closest real steps query the DWH can run (the missing tables will not be added). Phase 1 has no such dependency. Build the `openquery` path first; keep `exec_at` behind `exec_mode` (RPC Out is off today).
 
 ### Task 2.1: Connection, relay wrapper, runner, value formatting
 
@@ -704,7 +704,7 @@ Read-only. I run the DWH ones through `scripts/dwh.ts` after you approve each (e
 
 ## Open items
 
-1. **Ask the DWH administrator** (draft message given in the session): add the six missing tables to `STG_AMOS` (`wp_status` and `wp_department_link` first: they unblock 12 of 15 queries); whether RPC Out can be enabled on `DWH_DB` for our login (enables `exec_at`); confirm the Oracle user behind the link is read-only (Phase 0b b4 showed no system-level write rights, table grants unknown); whether the copy truncates long text (three `text_html` values stop at exactly 3700 characters; `text` columns are `VARCHAR2(4000)`); indexes and statistics on the join columns (b6: 9–18 s for the steps query). **Phases 2–4 have little value until the tables exist**: today only `extract_all_parts.sql` can run.
+1. **Missing tables: decided they cannot be added (2026-11-17).** Open work, later: for each query that needs `wp_status`, `wp_department_link`, `cml_reference`, `oem_doc_partno`, `taskcard_coversheet_info` or `time_captured_history`, decide a workaround (for example filtering by the numeric status id in `wp_header` instead of the status name, if the ids are known) or dropping the information; the converter's availability report (#6) lists exactly what each query lacks. **Ask the DWH administrator** (draft message given in the session) about: whether RPC Out can be enabled on `DWH_DB` for our login (enables `exec_at`); confirm the Oracle user behind the link is read-only (Phase 0b b4 showed no system-level write rights, table grants unknown); whether the copy truncates long text (three `text_html` values stop at exactly 3700 characters; `text` columns are `VARCHAR2(4000)`); indexes and statistics on the join columns (b6: 9–18 s for the steps query). **Phases 2–4 have little value until workarounds exist**: today only `extract_all_parts.sql` can run.
 1a. **Choose verification keys from documents visible in AMOS** (the AMOS query tool shows only some documents; e.g. work order 8802418 is not found in `wo_text_description` there), and re-check the Vietnamese and 3700-character questions once such rows are available.
 2. **Before Phase 4:** a certificate from IT for the host PC (else a one-time browser warning) and approval to share DWH data this way; choose the access code.
 
@@ -715,7 +715,7 @@ Decisions I made that you may want to override: output names keep the source spe
 | # | Risk | Likelihood / impact | Mitigation |
 |---|---|---|---|
 | R1 | Pass-through is also slow (no indexes on the staging tables) | Medium / high | Phase 0b b6: 9–18 s, not clean. Conditional go: Phase 1 offline only; b6 re-test with the real query gates Phase 2; then the administrator |
-| R2 | Six missing tables stay missing | Medium / high | Ask now; the converter still works and shows ⊘ with the reason |
+| R2 | Six missing tables stay missing | **Certain (decided 2026-11-17) / high** | Per-query workaround or drop the information, decided later; the converter still works and shows ⊘ with the reason |
 | R3 | DWH renames/retypes columns, or the snapshot goes stale | Medium / medium | Schema diff, live compile check, refresh button, #78/#79 |
 | R4 | Oracle `''` = NULL changes results | Present / medium | `E_EMPTY_STRING`, `W_EMPTY_IS_NULL`, verification treats NULL vs empty as expected |
 | R5 | String sort order differs (`NLS_SORT` vs `en_US.UTF-8`) | High / low | `W_STRING_ORDER`; verification compares order on keys |
