@@ -710,8 +710,8 @@ async function main(args: string[]): Promise<number> {
     // Used by "Start DWH Runner.cmd": 0 = already running (browser opened), 3 = start it, 1 = problem.
     const running = await findRunning();
     if (running) {
-      openBrowser(running);
-      console.log("The DWH Runner is already running; it has been opened in your browser.");
+      if (process.env.DWH_NO_BROWSER !== "1") openBrowser(running);
+      console.log(`The DWH Runner is already running${process.env.DWH_NO_BROWSER === "1" ? ` (${running})` : "; it has been opened in your browser"}.`);
       return 0;
     }
     if (share.share) {
@@ -725,8 +725,8 @@ async function main(args: string[]): Promise<number> {
   }
   const running = await findRunning();
   if (running) {
-    openBrowser(running);
-    console.log("The DWH Runner is already running; it has been opened in your browser.");
+    if (process.env.DWH_NO_BROWSER !== "1") openBrowser(running);
+    console.log(`The DWH Runner is already running${process.env.DWH_NO_BROWSER === "1" ? ` (${running})` : "; it has been opened in your browser"}.`);
     return 0;
   }
   const fake = process.env.DWH_FAKE === "1";

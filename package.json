@@ -25,6 +25,10 @@
     "dwh:probe-exprs": "node --env-file-if-exists=.env src/cli.ts dwh:probe-exprs",
     "dwh:verify-pack": "node src/cli.ts dwh:verify-pack",
     "dwh:compare": "node src/cli.ts dwh:compare",
+    "dwh:ui": "node --env-file-if-exists=.env src/dwh/server.ts",
+    "dwh:shortcut": "node src/dwh/shortcut.ts",
+    "dwh:autostart": "node src/dwh/shortcut.ts --startup",
+    "dwh:share-setup": "node src/dwh/shareSetup.ts",
     "check": "npm run typecheck && npm test && npm run validate && npm run docs:check && npm run dwh:check"
   },
   "dependencies": {

@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Status:** Revision 2.1 (2026-11-17). Phases 0, 0b, 1 and 2 done (Phase 2 results in "Phase 2 findings" at the end). **The b6 re-test passed (2026-11-17, warm 1.4–1.6 s; see "Phase 0b findings")**. **The six missing DWH tables cannot be added (decision 2026-11-17)**: workarounds or dropping some information are decided later, per query; with the real catalogue **no repo query runs in the DWH as written today**. **Phase 3 done (2026-11-18)**: `dwh:verify-pack`, `dwh:compare`, `dwh:run --at`; every difference in the live check of `extract_wp_item_counts.sql` is explained (drift since the AMOS test copy, and rows the DWH keeps after they are deleted in AMOS, known and accepted; see "Phase 3 findings"). Phase 4 not started.
+**Status:** Revision 2.1 (2026-11-17). Phases 0, 0b, 1 and 2 done (Phase 2 results in "Phase 2 findings" at the end). **The b6 re-test passed (2026-11-17, warm 1.4–1.6 s; see "Phase 0b findings")**. **The six missing DWH tables cannot be added (decision 2026-11-17)**: workarounds or dropping some information are decided later, per query; with the real catalogue **no repo query runs in the DWH as written today**. **Phase 3 done (2026-11-18)**: `dwh:verify-pack`, `dwh:compare`, `dwh:run --at`; every difference in the live check of `extract_wp_item_counts.sql` is explained (drift since the AMOS test copy, and rows the DWH keeps after they are deleted in AMOS, known and accepted; see "Phase 3 findings"). **Phase 4 built and tested with fake data (2026-11-18)**: the page, launcher, shortcut and sharing setup; the acceptance walk (docs/dwh-runner-acceptance.md) and sharing are the user's next steps (see "Phase 4 findings").
 
 **Revision history**
 - *Rev 1 (2026-11-17):* PostgreSQL → T-SQL converter, run as four-part linked-server queries on SQL Server.
@@ -667,9 +667,9 @@ Read-only. I run the DWH ones through `scripts/dwh.ts` after you approve each (e
   - `startServer(opts: { root: string; share: ShareConfig; engine: QueryEngine; port?: number }): Promise<{ url: string; close(): Promise<void> }>` (throws `ShareNotReady` naming what is missing)
   - Routes: `GET /`, `POST /login {code}`, `GET /health` → `{ app: "amos-dwh-runner", version }`, `GET /api/sources`, `POST /api/convert {path}` → `{ pg, oracle, warnings, placeholders, available, missing, schemaIssues, freshness }`, `POST /api/run`, `POST /api/export` (CSV stream), `POST /api/stop`, `POST /api/compare` (≤ 200 MB), `POST /api/catalogue/refresh` (host only), `POST /api/quit` (host only)
 
-- [ ] **Step 1: Write failing tests**: `unshared binds to 127.0.0.1 only`; `shared without certificate or code refuses to start`; `shared serves HTTPS only` (fixture PFX); `wrong Host → 403` (both modes); `missing or wrong token → 403`; `shared: no session → login page; wrong code → 401; right code → HttpOnly, Secure, SameSite=Strict cookie`; `five wrong codes lock the IP for 15 minutes`; `IP outside allowCidrs → 403`; `quit and catalogue refresh from a non-loopback address → 403`; `second run by the same visitor → 429 with the busy message`; `fifth concurrent run → 429`; `path outside the source list → 400` (`../.env`, `C:\x.sql`); `unavailable query → plain "not available" message`; `server re-converts after the source changes on disk`; `aborted export marks the file incomplete`; `no response contains the fake DWH_PASSWORD`; `log line has time, IP, path, params, row count`; `/health signature`.
-- [ ] **Step 2–4:** Run (FAIL), implement, run (PASS).
-- [ ] **Step 5: Commit** `feat(dwh): runner server with sharing`.
+- [x] **Step 1: Write failing tests**: `unshared binds to 127.0.0.1 only`; `shared without certificate or code refuses to start`; `shared serves HTTPS only` (fixture PFX); `wrong Host → 403` (both modes); `missing or wrong token → 403`; `shared: no session → login page; wrong code → 401; right code → HttpOnly, Secure, SameSite=Strict cookie`; `five wrong codes lock the IP for 15 minutes`; `IP outside allowCidrs → 403`; `quit and catalogue refresh from a non-loopback address → 403`; `second run by the same visitor → 429 with the busy message`; `fifth concurrent run → 429`; `path outside the source list → 400` (`../.env`, `C:\x.sql`); `unavailable query → plain "not available" message`; `server re-converts after the source changes on disk`; `aborted export marks the file incomplete`; `no response contains the fake DWH_PASSWORD`; `log line has time, IP, path, params, row count`; `/health signature`.
+- [x] **Step 2–4:** Run (FAIL), implement, run (PASS).
+- [x] **Step 5: Commit** `feat(dwh): runner server with sharing`.
 
 ### Task 4.2: Page
 
@@ -677,9 +677,9 @@ Read-only. I run the DWH ones through `scripts/dwh.ts` after you approve each (e
 - Create: `src/dwh/ui/index.html`, `src/dwh/ui/app.js`, `src/dwh/ui/style.css`
 - Test: `server.test.ts` smoke (`/` serves the page with token and CSP); acceptance script below
 
-- [ ] **Step 1:** Build the layout from the A.9 sketch with the four states (✓ ⚠ ⊘ ✗); system font, no external assets; works at 1280×720 and wider.
-- [ ] **Step 2:** Walk the acceptance script with a fake engine (`DWH_FAKE=1`), then the real DWH.
-- [ ] **Step 3: Commit** `feat(dwh): runner page`.
+- [x] **Step 1:** Build the layout from the A.9 sketch with the four states (✓ ⚠ ⊘ ✗); system font, no external assets; works at 1280×720 and wider.
+- [ ] **Step 2:** Walk the acceptance script with a fake engine (`DWH_FAKE=1`), then the real DWH. *(Fake: walked by the executor in headless Edge (list, preview, ⊘/✗, Compare, Stop); the full script, and the real DWH, by the user.)*
+- [x] **Step 3: Commit** `feat(dwh): runner page`.
 
 ### Task 4.3: Launcher, shortcut, sharing setup, guide
 
@@ -688,11 +688,11 @@ Read-only. I run the DWH ones through `scripts/dwh.ts` after you approve each (e
 - Modify: `package.json` (`dwh:shortcut`, `dwh:autostart`, `dwh:share-setup`)
 - Test: `test/dwh/shareSetup.test.ts` (hash verifies; no plain code written; PowerShell command line built correctly without running it)
 
-- [ ] **Step 1:** Write failing `shareSetup.test.ts`, run (FAIL), implement, run (PASS).
-- [ ] **Step 2:** Write the launcher (A.9); in shared mode it prints the address for colleagues.
-- [ ] **Step 3:** `npm run dwh:shortcut`; double-click twice. Expected: browser opens; second time only the browser.
+- [x] **Step 1:** Write failing `shareSetup.test.ts`, run (FAIL), implement, run (PASS).
+- [x] **Step 2:** Write the launcher (A.9); in shared mode it prints the address for colleagues.
+- [ ] **Step 3:** `npm run dwh:shortcut`; double-click twice. Expected: browser opens; second time only the browser. *(The launcher itself was run twice by the executor with fake data: first start, second "already running"; the shortcut and double-click are acceptance step 1.)*
 - [ ] **Step 4:** With the user: `npm run dwh:share-setup`, restart, open from a second PC.
-- [ ] **Step 5: Commit** `feat(dwh): Windows launcher, sharing setup and guide`.
+- [x] **Step 5: Commit** `feat(dwh): Windows launcher, sharing setup and guide`.
 
 **Acceptance script** (done by the user): (1) shortcut opens the page; (2) `.env` renamed → plain message; (3) VPN off → plain message; (4) a ✓ query: preview rows; (5) a placeholder query with a pasted value with a trailing space; (6) download CSV, open in Excel, Vietnamese reads correctly; (7) a ✗ query shows why; (8) a ⊘ query names the missing tables; (9) edit a source, re-select, see the change; (10) Stop a long download; (11) Compare with an AMOS export; (12) Quit; (13) colleague's PC: address, certificate notice, code; (14) five wrong codes → locked; (15) colleague sees no Quit/Refresh; (16) two people run at once → results or a clear "busy".
 
@@ -867,3 +867,13 @@ New commands (offline unless noted): `npm run dwh:verify-pack -- <source.sql> [-
 - *Fixed keys:* A397-070824CIHALCS equal; A354-260425 and A616-200326 differ only by items the DWH kept after deletion.
 
 Consequence for later queries: anything counted from the DWH (items, workpacks, work orders) can include rows deleted in AMOS, unless the DWH marks them. Ask the DWH administrator whether deleted rows are marked or can be filtered.
+
+## Phase 4 findings (2026-11-18)
+
+Built with tests first; no live DWH query was run in Phase 4 (fake engine, `DWH_FAKE=1`).
+
+- **Server** (`src/dwh/server.ts`, `share.ts`, `engine.ts`): every plan test, plus compare, verify-pack, zero rows, CSV format, JSON-only bodies, catalogue refresh and quit. The page sends only a query path and values; the server re-reads and re-converts on every request. Shared mode: HTTPS, access code (scrypt hash), 12-hour session cookie, lockout, optional networks, host-only Quit/Refresh; the host PC itself needs no code.
+- **Compare in the page** works like `dwh:compare` (one shared function, `judgeComparison`): fixed keys, the row count AMOS showed, an optional list of rows; the page makes the frozen AMOS version, the user uploads only the AMOS export, and the page reads the DWH with the same frozen "now" and values. A query file changed in between is refused by name. Two Phase 3 leftovers fixed first: a missing or stale `pack.json` is now named, and text-typed columns never get the number rules (`007` is not `7`).
+- **New live statement, not yet run:** the "DWH data as of" line reads `MAX(WP_HEADER.MUTATION)` and its latest `MUTATION_TIME` every 5 minutes (exact text in the guide). Needs the user's approval before the page is used with the real DWH.
+- **Launcher** (`Start DWH Runner.cmd`): checks Node ≥ 24 and `.env` (existence only), starts the server minimised, or only opens the browser when it already runs (checked with fake data). `npm run dwh:shortcut`, `dwh:autostart`, `dwh:share-setup`, `dwh:ui` added.
+- **Not done, waiting for the user:** the acceptance walk ([dwh-runner-acceptance.md](dwh-runner-acceptance.md)); sharing (Task 4.3 step 4: IT certificate, approval to share DWH data, the access code, the firewall rule by IT).
