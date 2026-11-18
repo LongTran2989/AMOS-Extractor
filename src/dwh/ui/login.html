@@ -3,11 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>DWH Runner: access code</title>
+<title>DWH Runner</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<form id="login"><label>Access code <input id="code" type="password" autocomplete="current-password" autofocus></label> <button type="submit">Open</button><p id="msg" role="alert"></p></form>
+<form id="login" class="login">
+  <h1>DWH Runner</h1>
+  <p class="muted">Enter the access code the host gave you. You stay signed in for 12 hours.</p>
+  <label>Access code <input id="code" type="password" autocomplete="current-password" autofocus></label>
+  <button type="submit" class="primary">Open</button>
+  <p id="msg" role="alert"></p>
+</form>
 <script src="login.js"></script>
 </body>
 </html>

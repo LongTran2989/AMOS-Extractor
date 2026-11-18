@@ -328,7 +328,12 @@ export async function startServer(opts: ServerOptions): Promise<RunningServer> {
         return;
       }
       const d = describe(src);
-      const issues = ctx.catalogue ? diffSchema(ctx.catalogue, ctx.csv, ctx.model, conv.usedColumns, ctx.mapping) : [];
+      // diffSchema also covers every table in schema/*.yaml; keep only this query's tables and columns.
+      const usedCols = new Set(conv.usedColumns.map((u) => u.toUpperCase()));
+      const usedTables = new Set([...usedCols].map((u) => u.split(".")[0]));
+      const issues = (ctx.catalogue ? diffSchema(ctx.catalogue, ctx.csv, ctx.model, conv.usedColumns, ctx.mapping) : [])
+        .filter((i) => usedTables.has(i.table) && (i.column === undefined ? i.kind === "missing_table" : usedCols.has(`${i.table}.${i.column}`)))
+        .map((i) => (i.column ? { ...i, plain: `${i.table}.${i.column}: ${i.plain}` } : i));
       sendJson(res, 200, {
         path: src,
         state: d.state,

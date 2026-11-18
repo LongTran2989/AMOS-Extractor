@@ -378,6 +378,21 @@ test("unavailable query -> plain \"not available\" message", async () => {
   }
 });
 
+test("the column check names only the query's own tables and columns", async () => {
+  const { s, token } = await unshared();
+  try {
+    const c = JSON.parse((await call(s.url, "/api/convert", { json: { path: "extract_wp_item_counts.sql" }, token })).body);
+    const used = new Set(["WP_HEADER.STATION", "WP_HEADER.WP_STATUS", "WP_HEADER.WPNO", "WP_HEADER.WPNO_I", "WP_ASSIGNMENT.WP_ASSIGNMENTNO_I", "WP_ASSIGNMENT.WPNO_I"]);
+    assert.ok(c.schemaIssues.length > 0, "WP_HEADER.WPNO is a truncation risk");
+    for (const i of c.schemaIssues) {
+      assert.ok(i.column !== undefined && used.has(`${i.table}.${i.column}`), `unrelated issue: ${JSON.stringify(i)}`);
+      assert.ok(i.plain.startsWith(`${i.table}.${i.column}: `), "the note names the column");
+    }
+  } finally {
+    await s.close();
+  }
+});
+
 test("sources list every query with its state", async () => {
   const { s, token } = await unshared();
   try {

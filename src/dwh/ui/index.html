@@ -8,7 +8,80 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div id="app"></div>
+<header class="top">
+  <h1>DWH Runner</h1>
+  <span id="fake" class="badge fake" hidden>FAKE DATA (DWH_FAKE=1): nothing is read from the DWH</span>
+  <span class="spacer"></span>
+  <span id="freshness" class="muted">DWH data as of …</span>
+  <button id="refresh" type="button" class="small" hidden title="Read the list of DWH tables and columns again (host PC only)">Refresh catalogue</button>
+  <button id="quit" type="button" class="small danger" hidden title="Stop the DWH Runner (host PC only)">Quit</button>
+</header>
+<div id="hostmsg" class="banner" role="status" hidden></div>
+<div class="layout">
+  <nav class="side" aria-label="Queries">
+    <h2>Queries</h2>
+    <ul id="sources" class="sources"><li class="muted">Loading…</li></ul>
+    <p class="legend"><span class="st ready">✓</span> ready<br><span class="st notes">⚠</span> ready, with notes<br><span class="st unavailable">⊘</span> not available in the DWH<br><span class="st refused">✗</span> cannot convert</p>
+  </nav>
+  <main class="main">
+    <div id="empty" class="muted pad">Pick a query on the left.</div>
+    <section id="query" hidden>
+      <h2 id="qname"></h2>
+      <div class="tabs" role="tablist">
+        <button type="button" role="tab" data-tab="pg" aria-selected="false">AMOS version</button>
+        <button type="button" role="tab" data-tab="oracle" aria-selected="false">DWH version</button>
+        <button type="button" role="tab" data-tab="compare" aria-selected="false">Compare</button>
+      </div>
+      <div id="tab-pg" class="tabpanel" hidden>
+        <div class="row"><button id="copy-pg" type="button" class="small">Copy for AMOS</button><span id="copy-pg-msg" class="muted"></span></div>
+        <pre id="pg" class="sql"></pre>
+      </div>
+      <div id="tab-oracle" class="tabpanel" hidden>
+        <p class="muted">Oracle SQL the DWH receives (read only). Placeholders are filled in when it runs.</p>
+        <pre id="oracle" class="sql"></pre>
+      </div>
+      <div id="tab-compare" class="tabpanel" hidden>
+        <p class="muted">Checks that AMOS and the DWH give the same answer, the same way <code>npm run dwh:compare</code> does (fixed keys from dwh/verify-keys.yaml, the row count AMOS showed, an optional list of rows to judge on).</p>
+        <ol class="steps">
+          <li>
+            <label>Freeze "now" at (UTC) <input id="cmp-at" type="text" placeholder="last whole hour, e.g. 2026-11-18T03:00:00Z" size="30"></label>
+            <button id="cmp-pack" type="button">Make the AMOS version</button>
+            <div id="cmp-pack-out" hidden>
+              <div class="row"><button id="copy-cmp" type="button" class="small">Copy for AMOS</button><span id="cmp-pack-msg" class="muted"></span></div>
+              <pre id="cmp-sql" class="sql"></pre>
+            </div>
+          </li>
+          <li>Paste it into AMOS, run it, <b>note how many rows AMOS shows</b>, and export the result (Excel or CSV).</li>
+          <li>
+            <div class="grid">
+              <label>AMOS export <input id="cmp-file" type="file" accept=".xlsx,.csv,.txt"></label>
+              <label>Rows AMOS showed <input id="cmp-rows" type="text" inputmode="numeric" size="10" placeholder="e.g. 416"></label>
+              <label>Only judge these rows (optional) <input id="cmp-within" type="file" accept=".csv,.xlsx"></label>
+              <label>Match rows on (optional) <input id="cmp-keys" type="text" placeholder="e.g. z_WP_ID" size="24"></label>
+            </div>
+            <button id="cmp-run" type="button">Compare with the DWH</button> <span class="muted">The page reads the DWH now, with the same frozen "now" and values.</span>
+          </li>
+        </ol>
+        <div id="cmp-result" hidden>
+          <p id="cmp-verdict" class="verdict"></p>
+          <div class="row"><button id="cmp-download" type="button" class="small">Download report</button></div>
+          <div id="cmp-report" class="report"></div>
+        </div>
+      </div>
+      <div id="status" class="status"></div>
+      <form id="params" class="params" autocomplete="off"></form>
+      <div class="row actions">
+        <button id="run" type="button" class="primary">Run preview</button>
+        <button id="export" type="button">Download all as CSV</button>
+        <button id="stop" type="button" class="danger" disabled>Stop</button>
+        <span id="busy" class="muted"></span>
+      </div>
+      <div id="error" class="error" role="alert" hidden></div>
+      <p id="info" class="muted"></p>
+      <div class="tablewrap"><table id="result"></table></div>
+    </section>
+  </main>
+</div>
 <script src="app.js"></script>
 </body>
 </html>
