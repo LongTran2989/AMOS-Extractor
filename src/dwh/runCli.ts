@@ -12,14 +12,17 @@ import { placeholdersIn } from "./relay.ts";
 import { runConverted, type RelayPool } from "./run.ts";
 import { csvHeaderBytes, csvLine, formatCell } from "./format.ts";
 import { toPlain } from "./errorsPlain.ts";
+import { parseAt } from "./verifyPack.ts";
 
-export const RUN_USAGE = "Usage: npm run dwh:run -- <source.sql> [--param NAME=value] [--csv out.csv]   or   npm run dwh:run -- --raw <oracle.sql> [--csv out.csv]";
+export const RUN_USAGE = "Usage: npm run dwh:run -- <source.sql> [--param NAME=value] [--at 2026-11-10T06:00:00Z] [--csv out.csv]   or   npm run dwh:run -- --raw <oracle.sql> [--csv out.csv]";
 
 export interface RunArgs {
   source?: string;
   raw?: string;
   params: Record<string, string>;
   csv?: string;
+  /** Freeze "now" at this UTC instant (verification packs, plan A.7 #1). */
+  at?: string;
 }
 
 export function parseRunArgs(args: string[]): RunArgs {
@@ -38,11 +41,13 @@ export function parseRunArgs(args: string[]): RunArgs {
       out.params[kv.slice(0, eq)] = kv.slice(eq + 1);
     } else if (a === "--csv") out.csv = value();
     else if (a === "--raw") out.raw = value();
+    else if (a === "--at") out.at = parseAt(value());
     else if (a.startsWith("--")) throw new Error(`Unknown option ${a}. ${RUN_USAGE}`);
     else if (out.source === undefined) out.source = a;
     else throw new Error(`Only one query at a time. ${RUN_USAGE}`);
   }
   if (!out.source === !out.raw) throw new Error(RUN_USAGE);
+  if (out.raw && out.at) throw new Error(`--at works only with a repo query, not --raw. ${RUN_USAGE}`);
   return out;
 }
 
@@ -107,7 +112,7 @@ export async function dwhRun(
         log(`${parsed.source} is not one of the repo queries (root *.sql or queries/wp_seqs/*.sql).`);
         return 1;
       }
-      conv = convertSource(root, source, opts.cataloguePath ? { cataloguePath: opts.cataloguePath } : {});
+      conv = convertSource(root, source, { ...(opts.cataloguePath ? { cataloguePath: opts.cataloguePath } : {}), ...(parsed.at ? { pinNow: parsed.at } : {}) });
       for (const w of conv.warnings) log(`Note ${w.code}: ${w.plain}`);
     }
     const mapping = opts.mapping ?? loadMapping(path.join(root, "dwh", "mapping.yaml"));

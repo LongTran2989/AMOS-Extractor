@@ -23,6 +23,7 @@
     "dwh:compile-all": "node --env-file-if-exists=.env src/cli.ts dwh:compile-all",
     "dwh:run": "node --env-file-if-exists=.env src/cli.ts dwh:run",
     "dwh:probe-exprs": "node --env-file-if-exists=.env src/cli.ts dwh:probe-exprs",
+    "dwh:verify-pack": "node src/cli.ts dwh:verify-pack",
     "check": "npm run typecheck && npm test && npm run validate && npm run docs:check && npm run dwh:check"
   },
   "dependencies": {

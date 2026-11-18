@@ -1,5 +1,5 @@
 // `npm run dwh:*` commands (dispatched from src/cli.ts). Offline: dwh:convert, dwh:check,
-// dwh:schema-diff. Read-only live commands (through the relay, settings from .env):
+// dwh:schema-diff, dwh:verify-pack. Read-only live commands (through the relay, settings from .env):
 // dwh:catalogue, dwh:compile-all, dwh:run, dwh:probe-exprs.
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import * as path from "node:path";
@@ -12,8 +12,9 @@ import type { RelayPool } from "./run.ts";
 import { dwhRun } from "./runCli.ts";
 import { loadProbes, probePgText, runProbes } from "./probeExprs.ts";
 import { toPlain } from "./errorsPlain.ts";
+import { verifyPackCli } from "./verifyPack.ts";
 
-const COMMANDS = "dwh:convert, dwh:check, dwh:catalogue, dwh:schema-diff, dwh:compile-all, dwh:run, dwh:probe-exprs";
+const COMMANDS = "dwh:convert, dwh:check, dwh:catalogue, dwh:schema-diff, dwh:compile-all, dwh:run, dwh:probe-exprs, dwh:verify-pack";
 const PROBES = "test/dwh/fixtures/expr-probes.json";
 
 /** Opens the relay pool from .env, runs fn, always closes the pool. */
@@ -104,6 +105,8 @@ async function dispatch(command: string, args: string[], root: string): Promise<
       console.log(`${results.length - failed} of ${results.length} expression probes agree with the expected values.`);
       return failed ? 1 : 0;
     }
+    case "dwh:verify-pack":
+      return verifyPackCli(root, args, (s) => console.log(s));
     default:
       console.log(`Unknown command: ${command} (available: ${COMMANDS})`);
       return 1;
