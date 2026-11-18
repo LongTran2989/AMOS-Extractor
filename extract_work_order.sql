@@ -23,7 +23,7 @@ SELECT
     -- 3. wp_header (Workpack Header)
     wp_header.wpno_i AS z_WP_ID,
     wp_header.wpno AS z_WP_NO,
-    wp_header.wp_status,
+    wp_header.wp_status AS z_WP_STATUS_ID,
     wp_header.station AS z_WP_STATION,
 
     -- 4. workstep_link (Step Sequence inside WO)

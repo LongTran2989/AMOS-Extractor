@@ -20,7 +20,7 @@ SELECT
     wp_header.responsible,
 
     -- Workpack Status Attributes (from wp_header and wp_status lookup)
-    wp_header.wp_status,
+    wp_header.wp_status AS z_WP_STATUS_ID,
     wp_status.name AS z_WP_STATUS_NAME,
     wp_status.closed,
     wp_status.resource_allocation_done,

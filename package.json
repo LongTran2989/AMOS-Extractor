@@ -16,11 +16,25 @@
     "stitch": "node src/cli.ts stitch",
     "stitch:compare": "node src/cli.ts stitch:compare",
     "scaffold": "node src/cli.ts scaffold",
-    "check": "npm run typecheck && npm test && npm run validate && npm run docs:check"
+    "dwh:convert": "node src/cli.ts dwh:convert",
+    "dwh:check": "node src/cli.ts dwh:check",
+    "dwh:catalogue": "node --env-file-if-exists=.env src/cli.ts dwh:catalogue",
+    "dwh:schema-diff": "node src/cli.ts dwh:schema-diff",
+    "dwh:compile-all": "node --env-file-if-exists=.env src/cli.ts dwh:compile-all",
+    "dwh:run": "node --env-file-if-exists=.env src/cli.ts dwh:run",
+    "dwh:probe-exprs": "node --env-file-if-exists=.env src/cli.ts dwh:probe-exprs",
+    "dwh:verify-pack": "node src/cli.ts dwh:verify-pack",
+    "dwh:compare": "node src/cli.ts dwh:compare",
+    "dwh:ui": "node --env-file-if-exists=.env src/dwh/server.ts",
+    "dwh:shortcut": "node src/dwh/shortcut.ts",
+    "dwh:autostart": "node src/dwh/shortcut.ts --startup",
+    "dwh:share-setup": "node src/dwh/shareSetup.ts",
+    "check": "npm run typecheck && npm test && npm run validate && npm run docs:check && npm run dwh:check"
   },
   "dependencies": {
     "ajv": "^8.20.0",
-    "node-sql-parser": "^5.4.0",
+    "mssql": "^12.7.14",
+    "node-sql-parser": "5.4.0",
     "yaml": "^2.9.1"
   },
   "devDependencies": {

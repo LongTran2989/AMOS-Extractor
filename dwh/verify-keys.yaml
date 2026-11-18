@@ -1,0 +1,18 @@
+# Fixed verification keys (plan A.7 #2), read by `npm run dwh:compare`.
+# Per source query: which result columns identify a row (match_on), and a few fixed rows the
+# PASS/FAIL verdict is judged on (fixed_column = fixed_values). Pick rows that are visible in the
+# AMOS query tool (it shows only some rows) and that do not change often, so drift between the
+# AMOS run and the DWH run does not hide real differences.
+
+# The AMOS the user can query is a test copy taken around 2026-10-01, older than the DWH.
+# A616-200326 was chosen by the user on 2026-11-18 (visible in AMOS). The other two of that pick
+# (COMP-251026 BASE-MCC-TSV321-01, A327-031126 LINE-MCC-TSV) were created after the test copy, so
+# they were replaced by a rule fixed before comparing: per station, the oldest workpack (lowest
+# z_WP_ID) that is in the user's AMOS export and unchanged in the DWH since before 2026-10-01.
+extract_wp_item_counts.sql:
+  match_on: [z_WP_ID]
+  fixed_column: z_WP_NO
+  fixed_values:
+    - A616-200326 LINE-MCC-TSV         # DAD, Issued (112)
+    - A397-070824CIHALCS               # HAN, In Progress (11)
+    - A354-260425                      # SGN, In Progress (11)

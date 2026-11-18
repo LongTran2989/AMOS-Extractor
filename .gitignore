@@ -5,3 +5,10 @@ test_db.js
 archive/verification/*.csv
 /*.csv
 !/Database-Description-AMOS-csv.csv
+
+.env
+
+# DWH runner: verification packs, logs, per-PC sharing settings
+verify/
+logs/
+dwh/local/

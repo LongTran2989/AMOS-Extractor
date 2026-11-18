@@ -95,10 +95,10 @@ fields:
 
   # ---------------- Status ----------------
   - column: wp_header.wp_status
-    name_status: proposed
-    proposed_name: wp_status_id
+    name_status: approved
+    name: wp_status_id
     trust: documented
-    meaning: Current (present-day) status of the WP. Do NOT use to filter historical activity; use start/end dates.
+    meaning: Current (present-day) status of the WP. Do NOT use to filter historical activity; use start/end dates. Approved 2026-11-17 (needed to filter by status in the DWH, which has no wp_status table).
     enum:
       source: lookup
       lookup: wp_status.name
@@ -333,3 +333,4 @@ derived:
 notes:
   - "Active in a date range [A, B]: start_date <= B AND end_date >= A (overlap test on scheduled dates)."
   - "Joining wp_department_link repeats the WP row once per department (1:N). Group by wp_id in code."
+  - "wp_status ids (from AMOS, 2026-11-18): -4 Open, -2 Closed (closed Y), -1 Open, 11 In Progress, 111 In Preparation, 112 Issued, 113 In Preparation, 114 Issued, 115 In Progress, 116 Closed (closed Y), 211 AutoOpen, 212 Handover, 311 Default. Several ids share a name, so filter by the full list of ids. The DWH has no wp_status table: filter wp_header.wp_status by these ids there."

@@ -1,0 +1,111 @@
+# DWH mapping (hand-edited, committed). Fields from plan section A.6, filled from Phase 0 and Phase 0b (2026-11-17).
+# See "Phase 0" and "Phase 0b findings" at the end of docs/dwh-converter-plan.md.
+
+linked_server: DWH_DB
+oracle_schema: STG_AMOS
+
+# b1: is_rpc_out_enabled = false on the relay, so `EXEC (...) AT [DWH_DB]` is not possible.
+# Queries go through OPENQUERY (8000-character limit, no bound parameters, no duplicate column names: b7).
+# Switch to exec_at only if the DWH administrator enables RPC Out.
+exec_mode: openquery
+
+# b2: Oracle Database 12c Enterprise Edition 12.2.0.1.0 (so FETCH FIRST / OFFSET ... ROWS are available).
+oracle_version: 12
+
+# b3: NLS_SESSION_PARAMETERS and NLS_DATABASE_PARAMETERS.
+nls_comp: BINARY
+nls_sort: BINARY
+db_charset: AL32UTF8          # NLS_NCHAR_CHARACTERSET is AL16UTF16
+
+# Per-column renames. None needed so far (catalogue shows upper-case names only).
+columns: {}
+
+# AMOS PostgreSQL 14.19: datcollate = datctype = en_US.UTF-8 (Phase 0.7), TimeZone = UTC (b10).
+amos_collation: other
+
+# Hard limit for CSV downloads (A.8 #5).
+export_row_limit: 2000000
+
+# Facts learned in Phase 0 and 0b. Informational; the converter may read some of them later.
+dwh_facts:
+  relay_server: "SQL Server 2016 RTM (13.0.1601.5) Enterprise"   # no GREATEST/LEAST/DATETRUNC/STRING_AGG
+  relay_collation: SQL_Latin1_General_CP1_CI_AS                   # case-insensitive; irrelevant with pass-through
+  relay_clock: "local time is UTC+7; SYSUTCDATETIME() is UTC"
+  relay_rpc_out_enabled: false             # b1
+  relay_data_access_enabled: true          # b1
+  oracle_banner: "Oracle Database 12c Enterprise Edition Release 12.2.0.1.0 - 64bit Production"   # b2
+  oracle_clock:                            # b3
+    dbtimezone: "+07:00"
+    sessiontimezone: "+07:00"
+    sys_extract_utc_systimestamp: "returned the correct UTC time (2026-11-17 10:12 UTC)"
+  oracle_user_rights:                      # b4: system level only; per-table grants not listed by these views
+    privileges: [SET CONTAINER, CREATE DATABASE LINK, CREATE SESSION]
+    roles: [CONNECT]
+  column_reference_form: "TABLE.COLUMN without alias works (b5)"
+  openquery_text_limit: "8000 bytes = 4000 characters as N'...' (Phase 2: a 7,889-character N'...' text gave SQL Server error 103)"
+  duplicate_output_names: "refused by OPENQUERY (SQL Server error 492); exec_at not testable (RPC Out off)"   # b7
+  column_types_in_stg_amos:                # b8, whole schema: only these two types exist
+    VARCHAR2: { columns: 1122, max_length: 4000 }
+    NUMBER: { columns: 877 }
+    clob_columns: 0
+  text_html:
+    oracle_type: "VARCHAR2(4000)"          # NOT a CLOB
+    longest_values_chars: 3700             # three rows tie at exactly 3700 (descno_i 4430989, 4430990, 4340938)
+    received_through_relay: "3700 characters as nvarchar (7400 bytes); nothing lost between Oracle and relay"
+    cap_at_source_verified: false          # could not check against AMOS (AMOS tool shows only some documents)
+  vietnamese_text:
+    through_relay: "intact (e.g. descno_i 4296886 'BÌNH XỊT ĐI CAN VN512', 21 chars / 25 bytes in Oracle)"
+    compared_with_amos: false              # those rows are not visible in the AMOS tool
+  relay_types:                             # b9
+    number: "float"
+    date_expression: "datetime2(7)"
+    varchar2: "nvarchar(n)"
+  catalogue_form: openquery                # OPENQUERY(DWH_DB, 'SELECT ... FROM ALL_TAB_COLUMNS WHERE OWNER = ''STG_AMOS''')
+  login_read_only: true                    # relay login: not sysadmin, no CONTROL SERVER
+  date_time_columns: "Oracle NUMBER (whole numbers), same day/ms counts as AMOS"
+  freshness:
+    mutation: "date int, days since 1971-12-31 (WP_HEADER max = 2026-11-17)"
+    mutation_time: "ms since midnight; max on that day = 09:22:10 UTC"
+    estimate: "near real time (within minutes) at 2026-11-17 09:2x UTC"
+  wp_header_ranges:
+    start_date: { min: 10659, max: 83460 }     # 2001-03-07 .. 2200-07-03 (sentinel-like, far below 9999-12-31)
+    end_date_max: 83461                        # 2200-07-04
+  tables_in_stg_amos: 59
+  amos_tables_missing_in_dwh:                  # used by repo queries, absent from ALL_OBJECTS for STG_AMOS
+    - wp_status
+    - wp_department_link
+    - cml_reference
+    - oem_doc_partno
+    - taskcard_coversheet_info
+    - time_captured_history
+  amos_database: "PostgreSQL 14.19, TimeZone UTC"   # b10
+  speed_phase0_four_part:
+    single_table_count: "about 1-3 s"
+    four_table_join_top20: "37-68 s"
+    seven_table_steps_query_top50: "timed out at 120 s"
+  speed_phase0b_openquery_passthrough:         # b6, seconds including about 1 s Node start-up and login
+    four_table_example_top20: [59, 17.5, 16.6]
+    seven_table_steps_top50_no_status_filter: [18.0, 8.8, 8.8]
+    trivial_roundtrip: "under 1 s"
+    go_no_go_passed: false                     # 2 of 3 runs under 15 s; first (cold) run 18 s
+  speed_b6_retest:                             # gate for Phase 2, 2026-11-17; seconds incl. about 1 s Node start-up and login
+    query: "converted extract_wp_seqs_steps, only the 7 tables in the DWH, WHERE WPNO = 'A501-091026-CHK-C04', FETCH FIRST 50 ROWS ONLY, through OPENQUERY"
+    warm_runs: [1.6, 1.6, 1.4]
+    cold_run: "not measured (the first three runs were not timed by mistake; the workpack was cached afterwards)"
+    rows: 50                                   # identical in all six runs
+    gate_passed: true                          # warm far under 15 s; cold accepted as unmeasured (earlier, wider 6b cold run: 18 s, under 30 s)
+  phase2_live:                                 # 2026-11-17, read-only, approved by the user
+    catalogue: "1999 columns in 59 tables (dwh/catalogue.json)"
+    extract_all_parts_run: "refused by Oracle: ORA-00904 PART.MANUAL_TARGET_STOCK (also missing: PART.TARGET_STOCK)"
+    expression_probes: "24 of 24 PASS"
+    queries_available_as_written: 0
+    after_status_workaround: "extract_wp_item_counts.sql available; compiles; 2281 rows in 1.5 s to CSV (2026-11-18)"
+  part_numbers_stored_as_text:                 # float8 in AMOS, VARCHAR2 in the DWH (schema diff: retyped)
+    - part.alert_qty
+    - part.max_purch
+    - part.min_safety_stock
+    - part.reord_level
+    - part.safety_stock
+    - part.weight
+    - part_request_2.qty
+  other_tables_missing_in_dwh: [work_template, wp_history]   # described in schema/, not used by repo queries
