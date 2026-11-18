@@ -1,5 +1,5 @@
 // `npm run dwh:*` commands (dispatched from src/cli.ts). Offline: dwh:convert, dwh:check,
-// dwh:schema-diff, dwh:verify-pack. Read-only live commands (through the relay, settings from .env):
+// dwh:schema-diff, dwh:verify-pack, dwh:compare. Read-only live commands (through the relay, settings from .env):
 // dwh:catalogue, dwh:compile-all, dwh:run, dwh:probe-exprs.
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import * as path from "node:path";
@@ -13,8 +13,9 @@ import { dwhRun } from "./runCli.ts";
 import { loadProbes, probePgText, runProbes } from "./probeExprs.ts";
 import { toPlain } from "./errorsPlain.ts";
 import { verifyPackCli } from "./verifyPack.ts";
+import { compareCli } from "./compare.ts";
 
-const COMMANDS = "dwh:convert, dwh:check, dwh:catalogue, dwh:schema-diff, dwh:compile-all, dwh:run, dwh:probe-exprs, dwh:verify-pack";
+const COMMANDS = "dwh:convert, dwh:check, dwh:catalogue, dwh:schema-diff, dwh:compile-all, dwh:run, dwh:probe-exprs, dwh:verify-pack, dwh:compare";
 const PROBES = "test/dwh/fixtures/expr-probes.json";
 
 /** Opens the relay pool from .env, runs fn, always closes the pool. */
@@ -107,6 +108,8 @@ async function dispatch(command: string, args: string[], root: string): Promise<
     }
     case "dwh:verify-pack":
       return verifyPackCli(root, args, (s) => console.log(s));
+    case "dwh:compare":
+      return compareCli(root, args, (s) => console.log(s));
     default:
       console.log(`Unknown command: ${command} (available: ${COMMANDS})`);
       return 1;
