@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
@@ -343,4 +344,70 @@ test("review: text keys 3.10 and 3.1 are different rows; 1'596'611 still pairs w
   assert.equal(r.pass, false);
   const ok = compareResults(t(h, ["1'596'611", "x"]), t(h, ["1596611", "x"]), ["z_SEQ"], []);
   assert.equal(ok.pass, true);
+});
+
+// Phase 4 (deferred Phase 3 minors the page's Compare would expose).
+test("phase 4: a text column's 007 vs 7 and 3.50 vs 3.5 are real changes, not number formatting", () => {
+  const h = ["z_WP_ID", "z_CODE"];
+  for (const [a, d] of [["007", "7"], ["3.50", "3.5"], ["1'000", "1000"]] as const) {
+    const r = compareResults(t(h, ["1", a]), t(h, ["1", d]), ["z_WP_ID"], [], { textColumns: ["z_CODE"] });
+    assert.equal(r.cellDiffs[0]?.kind, "changed", `${a} vs ${d}`);
+    assert.deepEqual(r.differingColumns, ["z_CODE"], `${a} vs ${d}`);
+    assert.equal(r.pass, false, `${a} vs ${d}`);
+  }
+  // A number column keeps the export-formatting rule.
+  const n = compareResults(t(h, ["1", "3.50"]), t(h, ["1", "3.5"]), ["z_WP_ID"], [], { textColumns: [] });
+  assert.equal(n.cellDiffs[0]?.kind, "number_format");
+  assert.equal(n.pass, true);
+});
+
+test("phase 4: a text key 1'000 does not pair with 1000", () => {
+  const h = ["z_CODE", "z_X"];
+  const r = compareResults(t(h, ["1'000", "x"]), t(h, ["1000", "x"]), ["z_CODE"], [], { textColumns: ["z_CODE", "z_X"] });
+  assert.equal(r.onlyAmos, 1);
+  assert.equal(r.pass, false);
+});
+
+/** A verify folder with amos.csv/dwh.csv that match, plus optional pack and source. */
+function packRoot(pack: object | undefined, sourceText?: string): { root: string; dir: string } {
+  const root = mkdtempSync(path.join(tmpdir(), "cmp-"));
+  const dir = path.join(root, "verify", "q");
+  mkdirSync(dir, { recursive: true });
+  if (sourceText !== undefined) writeFileSync(path.join(root, "q.sql"), sourceText);
+  if (pack) writeFileSync(path.join(dir, "pack.json"), JSON.stringify(pack));
+  writeFileSync(path.join(dir, "amos.csv"), "z_wp_id,z_wp_no\r\n101,A-1\r\n");
+  writeFileSync(path.join(dir, "dwh.csv"), '"z_WP_ID","z_WP_NO"\r\n"101","A-1"\r\n');
+  return { root, dir };
+}
+
+test("phase 4: dwh:compare names a missing pack.json and what it means", () => {
+  const { root, dir } = packRoot(undefined);
+  try {
+    const lines: string[] = [];
+    compareCli(root, [path.join(dir, "amos.csv"), path.join(dir, "dwh.csv")], (s) => lines.push(s));
+    const head = lines.join("\n").split("## ")[0]!;
+    assert.match(head, /No pack\.json/);
+    assert.match(head, /row order was not checked/);
+    assert.match(head, /dwh:verify-pack/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("phase 4: dwh:compare fails and says so when the query file changed after the pack was made", () => {
+  const sha = (s: string) => createHash("sha256").update(s, "utf8").digest("hex");
+  const { root, dir } = packRoot({ source: "q.sql", sourceSha256: sha("SELECT 1\n"), at: "2026-11-10T06:00:00Z", params: {}, orderKeys: [], outputs: [], warnings: [] }, "SELECT 2\n");
+  try {
+    const lines: string[] = [];
+    const code = compareCli(root, [path.join(dir, "amos.csv"), path.join(dir, "dwh.csv")], (s) => lines.push(s));
+    const out = lines.join("\n");
+    assert.equal(code, 1, out);
+    assert.match(out.split("## ")[0]!, /q\.sql changed after the pack was made/);
+    // Unchanged source (CRLF on disk = LF in the pack): no complaint, PASS.
+    writeFileSync(path.join(root, "q.sql"), "SELECT 1\r\n");
+    const again: string[] = [];
+    assert.equal(compareCli(root, [path.join(dir, "amos.csv"), path.join(dir, "dwh.csv")], (s) => again.push(s)), 0, again.join("\n"));
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });
