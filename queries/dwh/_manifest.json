@@ -1067,6 +1067,71 @@
       "column": 7
     },
     {
+      "source": "extract_wp_check_part_event_types.sql",
+      "sourceSha256": "8ab6864a75281a69dcd16ced6ac3761b50e090ba50c05171f2b5fc92059ec4f6",
+      "status": "converted",
+      "output": "queries/dwh/extract_wp_check_part_event_types.sql",
+      "available": true,
+      "missing": [],
+      "warnings": [
+        {
+          "code": "W_RETYPED_COLUMN",
+          "plain": "The column part_request_2.qty is float8 in AMOS but VARCHAR2 in the DWH. Its values may look different."
+        },
+        {
+          "code": "W_EMPTY_IS_NULL",
+          "plain": "Text that is empty ('') in AMOS is NULL in the DWH, so IS NULL, <>, NOT IN, NOT LIKE, text ranges and COALESCE/NULLIF on text can match different rows."
+        }
+      ],
+      "placeholders": [
+        {
+          "name": "WP_NAME",
+          "maxLength": 100
+        }
+      ],
+      "outputs": [
+        {
+          "name": "z_PART_REQUESTNO_I",
+          "type": "int"
+        },
+        {
+          "name": "EVENT_TYPE",
+          "type": "text"
+        },
+        {
+          "name": "EVENT_KEY",
+          "type": "int"
+        },
+        {
+          "name": "z_PART_NO",
+          "type": "text"
+        },
+        {
+          "name": "z_PART_QTY",
+          "type": "float"
+        },
+        {
+          "name": "STATUS",
+          "type": "int"
+        }
+      ],
+      "orderKeys": [],
+      "usedColumns": [
+        "part_request_2.event_key",
+        "part_request_2.event_type",
+        "part_request_2.part_requestno_i",
+        "part_request_2.partno",
+        "part_request_2.qty",
+        "part_request_2.status",
+        "wo_header.event_perfno_i",
+        "wp_assignment.event_perfno_i",
+        "wp_assignment.wpno_i",
+        "wp_header.wpno",
+        "wp_header.wpno_i"
+      ],
+      "execLength": 573
+    },
+    {
       "source": "extract_wp_item_counts.sql",
       "sourceSha256": "3ed9c1c511a17111a5d7b20fdb700fcc5c49322fa0eb69d9b041e402075abf62",
       "status": "converted",
