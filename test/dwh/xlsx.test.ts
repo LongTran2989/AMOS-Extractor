@@ -102,3 +102,18 @@ test("xlsx with the 1904 date system", () => {
 test("a file that is not an xlsx gets a plain error", () => {
   assert.throws(() => readXlsx(Buffer.from("z_wp_id,z_wp_no\r\n1,A\r\n")), /not an Excel \(\.xlsx\) file/);
 });
+
+test("a part that inflates past the limit is refused with a plain message (zip bomb)", () => {
+  const big = `<row r="1"><c r="A1" t="inlineStr"><is><t>${"x".repeat(200_000)}</t></is></c></row>`;
+  assert.throws(() => readXlsx(workbook(big), { maxInflated: 100_000 }), /too large/);
+  assert.equal(readXlsx(workbook(big), { maxInflated: 1_000_000 }).header[0]!.length, 200_000);
+});
+
+test("parts the reader does not use are never inflated", () => {
+  const files = zip([
+    { name: "xl/workbook.xml", text: '<workbook><sheets><sheet name="R" sheetId="1"/></sheets></workbook>' },
+    { name: "xl/worksheets/sheet1.xml", text: '<worksheet><sheetData><row r="1"><c r="A1" t="inlineStr"><is><t>a</t></is></c></row></sheetData></worksheet>' },
+    { name: "xl/media/huge.bin", text: "y".repeat(500_000), deflate: true },
+  ]);
+  assert.deepEqual(readXlsx(files, { maxInflated: 10_000 }).header, ["a"]);
+});

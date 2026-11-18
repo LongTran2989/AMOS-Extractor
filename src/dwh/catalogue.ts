@@ -38,6 +38,23 @@ export async function fetchCatalogue(pool: RelayPool, mapping: DwhMapping): Prom
   return { takenAt: new Date().toISOString().replace(/\.\d{3}Z$/, "Z"), columns: sortCatalogue(columns) };
 }
 
+/**
+ * Refuses a catalogue read that is almost certainly broken (DWH maintenance, a lost privilege,
+ * a cut-off read) before it is written: saving it would mark every query unavailable and
+ * rewrite every generated file. Empty is always refused; losing more than half the tables of
+ * the current snapshot is refused too.
+ */
+export function assertCatalogueSane(next: Catalogue, current: Catalogue | undefined): void {
+  if (next.columns.length === 0)
+    throw new Error("The DWH returned no columns for the catalogue (maintenance, or a lost permission?). The current snapshot was kept.");
+  if (!current) return;
+  const count = (c: Catalogue) => new Set(c.columns.map((x) => x.table.toUpperCase())).size;
+  const now = count(next);
+  const before = count(current);
+  if (now * 2 < before)
+    throw new Error(`The DWH returned only ${now} tables for the catalogue, against ${before} in the current snapshot. The current snapshot was kept. If the DWH really lost those tables, run npm run dwh:catalogue -- --force.`);
+}
+
 /** Stable JSON text for dwh/catalogue.json. */
 export function catalogueJson(cat: Catalogue): string {
   return `${JSON.stringify({ takenAt: cat.takenAt, columns: sortCatalogue(cat.columns) }, null, 2)}\n`;

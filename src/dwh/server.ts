@@ -23,8 +23,8 @@ import { SAFE_VALUE } from "./relay.ts";
 import { csvHeaderBytes, csvLine, formatCell } from "./format.ts";
 import { toPlain } from "./errorsPlain.ts";
 import { diffSchema } from "./schemaDiff.ts";
-import { catalogueJson } from "./catalogue.ts";
-import { judgeComparison, readTableBuffer, sha256Text } from "./compare.ts";
+import { assertCatalogueSane, catalogueJson, loadCatalogue } from "./catalogue.ts";
+import { CompareInputError, judgeComparison, readTableBuffer, sha256Text } from "./compare.ts";
 import { defaultAt, parseAt, pinPg } from "./verifyPack.ts";
 import type { Table } from "../stitch/stitch.ts";
 import { addressAllowed, isHostAddress, loadShareConfig, plainIp, shareProblems, ShareNotReady, verifyCode, type ShareConfig } from "./share.ts";
@@ -250,6 +250,7 @@ export async function startServer(opts: ServerOptions): Promise<RunningServer> {
 
   const statusOf = (e: unknown): number => {
     if (e instanceof HttpError) return e.status;
+    if (e instanceof CompareInputError) return 400;
     if (e instanceof ConvertError) {
       if (e.code === "E_MISSING_IN_DWH" || e.code === "E_STOPPED") return 409;
       if (e.code === "E_UNSAFE_PARAM_VALUE" || e.code === "E_PARAM_MISSING" || e.code === "E_UNKNOWN_PARAM") return 400;
@@ -258,7 +259,7 @@ export async function startServer(opts: ServerOptions): Promise<RunningServer> {
     return 502;
   };
   const errorBody = (e: unknown) => {
-    if (e instanceof HttpError) return { error: scrubText(e.message) };
+    if (e instanceof HttpError || e instanceof CompareInputError) return { error: scrubText(e.message) };
     const p = plain(e);
     return { error: p.message, ...(p.detail ? { detail: p.detail } : {}), ...(e instanceof ConvertError ? { code: e.code } : {}) };
   };
@@ -491,7 +492,12 @@ export async function startServer(opts: ServerOptions): Promise<RunningServer> {
       if (sha256Text(now0) !== pack.sourceSha256)
         throw new HttpError(409, `${src} changed after you made the AMOS version. Make the AMOS version again (step 1), run it in AMOS and export again.`);
       const params = trimParams(pack.params);
-      const at = parseAt(pack.at);
+      let at: string;
+      try {
+        at = parseAt(pack.at);
+      } catch {
+        throw new HttpError(400, `The AMOS version has no valid frozen "now" (${JSON.stringify(pack.at)}). Make the AMOS version again (step 1), run it in AMOS and export again.`);
+      }
       const { conv } = convertNow(src, at);
       gate(conv);
       let amos: Table;
@@ -502,6 +508,9 @@ export async function startServer(opts: ServerOptions): Promise<RunningServer> {
       } catch (e) {
         throw new HttpError(400, `The file could not be read as CSV or Excel: ${e instanceof Error ? e.message : String(e)}`);
       }
+      // Catch a mistyped key before the DWH export, which can take minutes.
+      const amosCols = new Set(amos.header.map((h) => h.trim().toLowerCase()));
+      for (const k of keys ?? []) if (!amosCols.has(k.trim().toLowerCase())) throw new CompareInputError(`The key column ${k} is not in ${amosName}.`);
       const ac = acquire(visitor);
       const started = Date.now();
       try {
@@ -537,7 +546,13 @@ export async function startServer(opts: ServerOptions): Promise<RunningServer> {
       const ac = acquire(visitor);
       try {
         const cat = await engine.refreshCatalogue();
-        writeFileSync(path.join(root, "dwh", "catalogue.json"), catalogueJson(cat), "utf8");
+        const file = path.join(root, "dwh", "catalogue.json");
+        try {
+          assertCatalogueSane(cat, loadCatalogue(file));
+        } catch (e) {
+          throw new HttpError(502, e instanceof Error ? e.message : String(e));
+        }
+        writeFileSync(file, catalogueJson(cat), "utf8");
         const r = dwhConvert(root);
         const tables = new Set(cat.columns.map((c) => c.table)).size;
         log({ ip, action: "catalogue", rows: cat.columns.length, result: "ok" });

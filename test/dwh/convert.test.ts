@@ -194,3 +194,9 @@ test("string: pinNow", () => {
   assert.equal(whereOf("(DATE '1971-12-31' + wp_header.start_date) = CURRENT_DATE", "2026-11-10T00:00:00Z"), "((DATE '1971-12-31' + WP_HEADER.START_DATE) = DATE '2026-11-10')");
   assert.equal(whereOf("(DATE '1971-12-31' + wp_header.start_date) < CURRENT_TIMESTAMP", "2026-11-10T00:00:00Z"), "((DATE '1971-12-31' + WP_HEADER.START_DATE) < TIMESTAMP '2026-11-10 00:00:00')");
 });
+
+test("LIMIT ALL OFFSET n converts to OFFSET n ROWS with no FETCH", () => {
+  const r = convertQuery("SELECT wp_header.wpno_i AS z_WP_ID FROM wp_header ORDER BY wp_header.wpno_i LIMIT ALL OFFSET 10", "t.sql", opts);
+  assert.match(r.exec, /OFFSET 10 ROWS$/);
+  assert.doesNotMatch(r.exec, /FETCH/);
+});

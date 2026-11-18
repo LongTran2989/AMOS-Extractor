@@ -675,6 +675,29 @@ test("compare works like dwh:compare: fixed keys, --amos-rows, --within, a stale
   }
 });
 
+test("compare input mistakes (unknown key column, bad --within list, bad pack time) come back as 400 with the reason", async () => {
+  const { s, token } = await unshared(fakeEngine(root, { rows: 5 }));
+  try {
+    const vp = await call(s.url, "/api/verify-pack", { json: { path: "q_cmp.sql", at: "2026-11-18T03:00:00Z", params: {} }, token });
+    const { pack } = JSON.parse(vp.body);
+    const amos = Buffer.from((await call(s.url, "/api/export", { json: { path: "q_cmp.sql", params: {} }, token })).body, "utf8");
+
+    const key = await compareCall(s.url, token, { path: "q_cmp.sql", pack, keys: ["z_nope"] }, amos);
+    assert.equal(key.status, 400, key.body);
+    assert.match(JSON.parse(key.body).error, /key column z_nope is not in amos.csv/);
+
+    const within = await compareCall(s.url, token, { path: "q_cmp.sql", pack }, amos, Buffer.from('"other"\r\n"1"\r\n'));
+    assert.equal(within.status, 400, within.body);
+    assert.match(JSON.parse(within.body).error, /unchanged\.csv has no column/);
+
+    const at = await compareCall(s.url, token, { path: "q_cmp.sql", pack: { ...pack, at: "yesterday" } }, amos);
+    assert.equal(at.status, 400, at.body);
+    assert.match(JSON.parse(at.body).error, /Make the AMOS version again/);
+  } finally {
+    await s.close();
+  }
+});
+
 test("compare without a pack is refused in plain words; uploads over 200 MB are refused", async () => {
   const { s, token } = await unshared(fakeEngine(root, { rows: 5 }));
   try {
@@ -700,6 +723,21 @@ test("catalogue refresh from the host writes the snapshot", async () => {
     assert.equal(r.status, 200, r.body);
     assert.match(JSON.parse(r.body).message, /columns in \d+ tables/);
     assert.ok(existsSync(path.join(root, "dwh", "catalogue.json")));
+  } finally {
+    await s.close();
+  }
+});
+
+test("catalogue refresh refuses an empty DWH read and keeps the current snapshot", async () => {
+  const file = path.join(root, "dwh", "catalogue.json");
+  const before = readFileSync(file, "utf8");
+  const empty: QueryEngine = { ...fakeEngine(root), refreshCatalogue: async () => ({ takenAt: "2026-11-18T00:00:00Z", columns: [] }) };
+  const { s, token } = await unshared(empty);
+  try {
+    const r = await call(s.url, "/api/catalogue/refresh", { json: {}, token });
+    assert.equal(r.status, 502, r.body);
+    assert.match(JSON.parse(r.body).error, /no columns.*current snapshot was kept/);
+    assert.equal(readFileSync(file, "utf8"), before);
   } finally {
     await s.close();
   }

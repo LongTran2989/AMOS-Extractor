@@ -5,7 +5,7 @@ import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import * as path from "node:path";
 import { dwhCheck, dwhConvert, generateAll, SCHEMA_DIFF } from "./sources.ts";
 import { loadMapping } from "./mapping.ts";
-import { catalogueJson, fetchCatalogue } from "./catalogue.ts";
+import { assertCatalogueSane, catalogueJson, fetchCatalogue, loadCatalogue } from "./catalogue.ts";
 import { compileAll } from "./compileAll.ts";
 import { dwhConfigFromEnv, openPool } from "./db.ts";
 import type { RelayPool } from "./run.ts";
@@ -70,7 +70,16 @@ async function dispatch(command: string, args: string[], root: string): Promise<
     case "dwh:catalogue": {
       const mapping = loadMapping(path.join(root, "dwh", "mapping.yaml"));
       const cat = await withPool((pool) => fetchCatalogue(pool, mapping));
-      writeFileSync(path.join(root, "dwh", "catalogue.json"), catalogueJson(cat), "utf8");
+      const file = path.join(root, "dwh", "catalogue.json");
+      if (!args.includes("--force")) {
+        try {
+          assertCatalogueSane(cat, loadCatalogue(file));
+        } catch (e) {
+          console.log(e instanceof Error ? e.message : String(e));
+          return 1;
+        }
+      }
+      writeFileSync(file, catalogueJson(cat), "utf8");
       const tables = new Set(cat.columns.map((c) => c.table)).size;
       console.log(`wrote dwh/catalogue.json: ${cat.columns.length} columns in ${tables} tables (taken ${cat.takenAt}). Next: npm run dwh:schema-diff and npm run dwh:convert.`);
       return 0;

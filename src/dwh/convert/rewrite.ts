@@ -411,8 +411,11 @@ function queryIr(node: PgNode, scope: ScopeInfo, ctx: RewriteCtx, top: boolean):
   const vals: PgNode[] = lim?.value ?? [];
   if (vals.length) {
     if (lim.seperator === "offset") {
-      if (vals.length === 2) [fetch, offset] = [String(vals[0].value), String(vals[1].value)];
-      else offset = String(vals[0].value);
+      // LIMIT ALL OFFSET n: "ALL" means no row limit, so only the OFFSET survives.
+      if (vals.length === 2) {
+        if (vals[0].type === "number") fetch = String(vals[0].value);
+        offset = String(vals[1].value);
+      } else offset = String(vals[0].value);
     } else if (vals[0].type === "number") fetch = String(vals[0].value);
   }
   if ((fetch || offset) && ctx.mapping.oracleVersion < 12) {

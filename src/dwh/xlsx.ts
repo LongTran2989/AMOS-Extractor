@@ -9,7 +9,21 @@ import type { Table } from "../stitch/stitch.ts";
 
 const NOT_XLSX = "This is not an Excel (.xlsx) file, or it is damaged. Export from AMOS again, or save it as .csv.";
 
-function unzip(buf: Buffer): Map<string, Buffer> {
+/**
+ * Most bytes the reader will unpack from one file, across all the parts it reads. The upload
+ * limit only bounds the packed size; a crafted file (a "zip bomb") could otherwise unpack to
+ * many GB. 500 MiB is also about the longest text Node can hold, so a bigger sheet could not be
+ * read anyway.
+ */
+export const MAX_INFLATED = 500 * 1024 * 1024;
+const TOO_LARGE = "This Excel file is too large to read here. Save it as .csv instead.";
+
+interface ZipEntry {
+  method: number;
+  data: Buffer;
+}
+
+function unzip(buf: Buffer): Map<string, ZipEntry> {
   // End of central directory: the last 0x06054b50 within the final 64 KiB + 22 bytes.
   let eocd = -1;
   for (let i = buf.length - 22; i >= Math.max(0, buf.length - 65557); i--) {
@@ -22,7 +36,7 @@ function unzip(buf: Buffer): Map<string, Buffer> {
   const count = buf.readUInt16LE(eocd + 10);
   let p = buf.readUInt32LE(eocd + 16);
   if (count === 0xffff || p === 0xffffffff) throw new Error("This Excel file is too large to read here (ZIP64). Save it as .csv instead.");
-  const files = new Map<string, Buffer>();
+  const files = new Map<string, ZipEntry>();
   for (let n = 0; n < count; n++) {
     if (p + 46 > buf.length || buf.readUInt32LE(p) !== 0x02014b50) throw new Error(NOT_XLSX);
     const method = buf.readUInt16LE(p + 10);
@@ -35,12 +49,30 @@ function unzip(buf: Buffer): Map<string, Buffer> {
     p += 46 + nameLen + extraLen + commentLen;
     if (buf.readUInt32LE(local) !== 0x04034b50) throw new Error(NOT_XLSX);
     const start = local + 30 + buf.readUInt16LE(local + 26) + buf.readUInt16LE(local + 28);
-    const data = buf.subarray(start, start + size);
-    if (method === 0) files.set(name, data);
-    else if (method === 8) files.set(name, inflateRawSync(data));
-    else throw new Error(`${NOT_XLSX} (unknown compression ${method})`);
+    files.set(name, { method, data: buf.subarray(start, start + size) });
   }
   return files;
+}
+
+/** Unpacks parts on demand, never more than `budget` bytes in total. */
+function partReader(files: Map<string, ZipEntry>, budget: number): (name: string) => string | undefined {
+  return (name) => {
+    const e = files.get(name);
+    if (!e) return undefined;
+    let out: Buffer;
+    if (e.method === 0) out = e.data;
+    else if (e.method === 8) {
+      try {
+        out = inflateRawSync(e.data, { maxOutputLength: Math.max(1, budget) });
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code === "ERR_BUFFER_TOO_LARGE") throw new Error(TOO_LARGE);
+        throw new Error(NOT_XLSX);
+      }
+    } else throw new Error(`${NOT_XLSX} (unknown compression ${e.method})`);
+    if (out.length > budget) throw new Error(TOO_LARGE);
+    budget -= out.length;
+    return out.toString("utf8");
+  };
 }
 
 function decodeXml(s: string): string {
@@ -110,9 +142,8 @@ function numberText(v: string): string {
 }
 
 /** The first worksheet as a Table: first row = header, every row padded to the header width. */
-export function readXlsx(buf: Buffer): Table {
-  const files = unzip(buf);
-  const text = (name: string) => files.get(name)?.toString("utf8");
+export function readXlsx(buf: Buffer, opts: { maxInflated?: number } = {}): Table {
+  const text = partReader(unzip(buf), opts.maxInflated ?? MAX_INFLATED);
   const workbook = text("xl/workbook.xml");
   if (!workbook) throw new Error(NOT_XLSX);
   const date1904 = /<workbookPr\b[^>]*\sdate1904="(1|true)"/.test(workbook);

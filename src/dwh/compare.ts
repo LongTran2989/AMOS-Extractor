@@ -11,6 +11,9 @@ import yaml from "yaml";
 import { normalizeCell, parseCsv, type Table } from "../stitch/stitch.ts";
 import { readXlsx } from "./xlsx.ts";
 
+/** A mistake in what the user asked to compare (a key column, a --within list); its message is shown as is. */
+export class CompareInputError extends Error {}
+
 export type DiffKind = "whitespace" | "case" | "null_vs_empty" | "number_format" | "truncated" | "tz_shift_7h" | "changed";
 
 export interface CellDiff {
@@ -139,7 +142,7 @@ function columnIndex(t: Table, name: string): number {
 /** Keeps the rows whose `column` value (trimmed) is one of `values`. */
 export function restrictTo(t: Table, column: string, values: string[]): Table {
   const i = columnIndex(t, column);
-  if (i < 0) throw new Error(`Column ${column} (from dwh/verify-keys.yaml) is not in the file.`);
+  if (i < 0) throw new CompareInputError(`Column ${column} (from dwh/verify-keys.yaml) is not in the file.`);
   const keep = new Set(values.map((v) => v.trim()));
   return { header: t.header, rows: t.rows.filter((r) => keep.has(clean(r[i]).trim())) };
 }
@@ -151,9 +154,9 @@ export function restrictTo(t: Table, column: string, values: string[]): Table {
  */
 export function restrictToListed(t: Table, column: string, list: Table, listName = "The list file", text = false): Table {
   const i = columnIndex(t, column);
-  if (i < 0) throw new Error(`Column ${column} is not in the file.`);
+  if (i < 0) throw new CompareInputError(`Column ${column} is not in the file.`);
   const j = columnIndex(list, column);
-  if (j < 0) throw new Error(`${listName} has no column ${column} (it needs the match column to say which rows to keep).`);
+  if (j < 0) throw new CompareInputError(`${listName} has no column ${column} (it needs the match column to say which rows to keep).`);
   const keep = new Set(list.rows.map((r) => keyNorm(r[j], text)));
   return { header: t.header, rows: t.rows.filter((r) => keep.has(keyNorm(r[i], text))) };
 }
@@ -183,7 +186,7 @@ export function compareResults(amos: Table, dwh: Table, keys: string[], orderKey
   const keyCols = keys.length ? keys : common.map((c) => c.name);
   const keyIdx = keyCols.map((k) => {
     const c = common.find((x) => x.name.toLowerCase() === k.toLowerCase());
-    if (!c) throw new Error(`The key column ${k} is not in both files.`);
+    if (!c) throw new CompareInputError(`The key column ${k} is not in both files.`);
     return c;
   });
   const keyOfAmos = (r: string[]) => keyIdx.map((c) => keyNorm(r[c.ai], c.text)).join("\u0001");

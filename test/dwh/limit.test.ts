@@ -63,3 +63,9 @@ test("#35 ORDER BY in a subquery or CTE without LIMIT is removed with W_SUBQUERY
   assert.equal(c.q.with[0]!.q.orderBy.length, 0);
   assert.deepEqual(c.codes, ["W_SUBQUERY_ORDER_DROPPED"]);
 });
+
+test("#32 LIMIT ALL OFFSET n keeps only the OFFSET (no FETCH)", () => {
+  const r = irOf("SELECT wp_header.wpno FROM wp_header ORDER BY wp_header.wpno_i LIMIT ALL OFFSET 10", v19);
+  assert.equal(r.q.fetch, undefined);
+  assert.equal(r.q.offset, "10");
+});
