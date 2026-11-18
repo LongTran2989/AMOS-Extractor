@@ -58,6 +58,7 @@ The `extract_*.sql` files with `<INSERT_WPNO_HERE>` placeholders are substituted
 - Some AMOS tables are missing in the DWH; see `docs/generated/dwh-schema-diff.md`. Refresh with `npm run dwh:catalogue`, then `npm run dwh:schema-diff` and `npm run dwh:convert`. Until `dwh/catalogue.json` exists, availability comes from `dwh_facts.amos_tables_missing_in_dwh` in `dwh/mapping.yaml` (tables only).
 - In `openquery` mode (RPC Out off) the runner refuses duplicate result names, `SELECT *` and unnamed formulas, and placeholder values outside `A-Z a-z 0-9 space . _ / -`.
 - Only `SELECT`/`WITH` ever runs, through `dwh:run` or the page. Never run writes on either database.
+- The DWH keeps rows that were deleted in AMOS (seen 2026-11-18: removed workpack items in `WP_ASSIGNMENT`, and apparently deleted workpacks), so DWH counts are equal to or higher than AMOS. Known and accepted; never report it as a converter error.
 - "Now"/"today" are UTC on both sides (`SYS_EXTRACT_UTC(SYSTIMESTAMP)`); never emit `SYSDATE` or Oracle `CURRENT_DATE`. Oracle treats `''` as NULL.
 
 ## Known repo quirk
