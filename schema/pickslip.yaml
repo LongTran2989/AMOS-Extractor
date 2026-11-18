@@ -1,0 +1,109 @@
+entity: pickslip
+description: Pickslips that issue the parts of a workstep part request, and the booking, receiving, order and stock-history rows behind them. Chain starts at part_request_2.part_requestno_i (see part_request.yaml).
+root: pickslip_detail
+tables:
+  part_request_info:
+    role: child
+    meaning: Extra data of a part request (the requested serial or batch number).
+    primary_key: [part_requestno_i]
+    joins:
+      - { from: part_request_info.part_requestno_i, to: part_request_2.part_requestno_i, type: left, cardinality: "1:1", trust: documented }
+  pickslip_detail:
+    role: root
+    meaning: One requested part line on a pickslip. Linked to the part request that triggered it.
+    primary_key: [pickslipno, recno]
+    joins:
+      - { from: pickslip_detail.part_requestno_i, to: part_request_2.part_requestno_i, type: left, cardinality: "N:1", trust: probed, note: "pickslip_header.event_key is deprecated (11.40). The chain is pickslip_header -> pickslip_detail (part_requestno_i) -> part_request_2." }
+      - { from: pickslip_detail.pickslipno, to: pickslip_header.pickslipno, type: left, cardinality: "N:1", trust: probed }
+  pickslip_header:
+    role: child
+    meaning: "Pickslip header: dates, stations, stores and receiver."
+    primary_key: [pickslipno]
+    joins:
+      - { from: pickslip_header.pickslipno, to: pickslip_detail.pickslipno, type: left, cardinality: "1:N", trust: documented }
+  pickslip_booked:
+    role: child
+    meaning: Parts actually booked (taken from stock) for a pickslip line. One row per booked piece or batch.
+    primary_key: [pickslipseqno_i]
+    joins:
+      - { from: pickslip_booked.pickslipno, to: pickslip_detail.pickslipno, type: left, cardinality: "N:1", trust: probed, note: "Also match pickslip_booked.recno = pickslip_detail.recno (composite key; one join per row in this file)." }
+      - { from: pickslip_booked.recdetailno_i, to: od_rec_detail.recdetailno_i, type: left, cardinality: "N:1", trust: probed, note: "The CSV names this the recdetail table; there is no recdetail table in the CSV, so it is od_rec_detail (confirmed on WP A501-091026-CHK-C04, item 6.1)." }
+  history:
+    role: child
+    meaning: Append-only stock history. Each booking or movement writes rows here.
+    primary_key: [historyno_i]
+    joins:
+      - { from: history.pickslipseqno_i, to: pickslip_booked.pickslipseqno_i, type: left, cardinality: "N:1", trust: probed, note: "History is an append-only log: joining it multiplies rows." }
+  od_detail:
+    role: child
+    meaning: Order detail (a purchase or exchange order line). Can be raised from a pickslip.
+    primary_key: [detailno_i]
+    joins:
+      - { from: od_detail.pickslipno, to: pickslip_detail.pickslipno, type: left, cardinality: "N:1", trust: documented, note: "The pickslip the order detail came from. pickslipseqno_i is also set (internal)." }
+  od_rec_detail:
+    role: child
+    meaning: "Receiving line (goods received against an order detail): label, batch, expiry, certificate date and company."
+    primary_key: [recdetailno_i]
+    joins:
+      - { from: od_rec_detail.detailno_i, to: od_detail.detailno_i, type: left, cardinality: "N:1", trust: documented }
+  allocation_link:
+    role: link
+    meaning: Link between a source (part request) and the material (rotable, consumable or order detail) allocated to it.
+    primary_key: [allocation_linkno_i]
+    joins:
+      - { from: allocation_link.source_key, to: part_request_2.part_requestno_i, type: left, cardinality: "N:1", trust: probed, note: "Only when source_type = 'PARTRQST' (seen on WP COMP-240926 BASE-MCC-TSV321-04, 2026-11-18)." }
+      - { from: allocation_link.ref_key, to: od_detail.detailno_i, type: left, cardinality: "N:1", trust: probed, note: "Only when ref_type = 'ORDER_DE'. ref_type 'ST' -> consumables.storeno_i; ref_type 'RO' -> rotables.psn (both seen 2026-11-18; the CSV descriptions use other names)." }
+  wo_part_on_off:
+    role: child
+    meaning: Parts installed on and removed from the aircraft during a work order action.
+    primary_key: [part_exchangeno_i]
+    joins:
+      - { from: wo_part_on_off.actionno_i, to: wo_text_action.actionno_i, type: left, cardinality: "N:1", trust: documented, note: "Only filled for a part exchange performed with an action text. Otherwise join on event_perfno_i only (work order level, not step level)." }
+fields:
+  - { column: part_request_info.serialno, name_status: unnamed, trust: documented, note: "Requested S/N or B/N." }
+  - { column: pickslip_detail.partno, name_status: unnamed, trust: documented, note: "P/N requested on the pickslip. Can differ from part_request_2.partno (alternates)." }
+  - { column: pickslip_detail.serialno, name_status: unnamed, trust: documented }
+  - { column: pickslip_detail.qty_req, name_status: unnamed, trust: documented }
+  - { column: pickslip_detail.qty_booked, name_status: unnamed, trust: documented, note: "Legacy AMOS data only (CSV). Use pickslip_booked for booked quantities." }
+  - { column: pickslip_detail.recno, name_status: unnamed, trust: documented }
+  - { column: pickslip_detail.part_requestno_i, name_status: unnamed, trust: documented }
+  - { column: pickslip_header.pickslip_date, name_status: unnamed, trust: documented, note: "Days since 1971-12-31." }
+  - { column: pickslip_header.issue_date, name_status: unnamed, trust: documented, note: "Days since 1971-12-31." }
+  - { column: pickslip_booked.pickslipseqno_i, name_status: unnamed, trust: documented }
+  - { column: pickslip_booked.partno, name_status: unnamed, trust: documented }
+  - { column: pickslip_booked.serialno, name_status: unnamed, trust: documented }
+  - { column: pickslip_booked.batchno, name_status: unnamed, trust: documented }
+  - { column: pickslip_booked.expire_date, name_status: unnamed, trust: documented, note: "Days since 1971-12-31." }
+  - { column: pickslip_booked.qty_booked, name_status: unnamed, trust: documented }
+  - { column: pickslip_booked.qty_canceled, name_status: unnamed, trust: documented }
+  - { column: pickslip_booked.recdetailno_i, name_status: unnamed, trust: documented }
+  - { column: pickslip_booked.storeno_i, name_status: unnamed, trust: documented }
+  - { column: pickslip_booked.return_part_requestno_i, name_status: unnamed, trust: documented }
+  - { column: history.labelno, name_status: unnamed, trust: documented }
+  - { column: history.serialno, name_status: unnamed, trust: documented }
+  - { column: history.batchno, name_status: unnamed, trust: documented }
+  - { column: history.qty, name_status: unnamed, trust: documented }
+  - { column: history.certificate_date, name_status: unnamed, trust: documented, note: "Days since 1971-12-31." }
+  - { column: history.certificate_company, name_status: unnamed, trust: documented }
+  - { column: od_detail.serialno, name_status: unnamed, trust: documented }
+  - { column: od_detail.labelno, name_status: unnamed, trust: documented }
+  - { column: od_rec_detail.labelno, name_status: unnamed, trust: documented, note: "New label number of the received rotable (consumables: label of the consumable)." }
+  - { column: od_rec_detail.batchno, name_status: unnamed, trust: documented }
+  - { column: od_rec_detail.expire_date, name_status: unnamed, trust: documented, note: "Days since 1971-12-31." }
+  - { column: od_rec_detail.certificate_date, name_status: unnamed, trust: documented, note: "Days since 1971-12-31." }
+  - { column: od_rec_detail.certificate_company, name_status: unnamed, trust: documented }
+  - { column: od_rec_detail.cert_type, name_status: unnamed, trust: unusable, note: "Deprecated in the CSV: use the certificate table (not in the DWH) instead." }
+  - { column: allocation_link.source_type, name_status: unnamed, trust: documented }
+  - { column: allocation_link.ref_type, name_status: unnamed, trust: documented }
+  - { column: allocation_link.ref_key, name_status: unnamed, trust: documented }
+  - { column: allocation_link.qty, name_status: unnamed, trust: documented }
+  - { column: wo_part_on_off.labelno, name_status: unnamed, trust: documented }
+  - { column: wo_part_on_off.serialno, name_status: unnamed, trust: documented, note: "S/N of the installed part." }
+  - { column: wo_part_on_off.partno_off, name_status: unnamed, trust: documented }
+  - { column: wo_part_on_off.serialno_off, name_status: unnamed, trust: documented, note: "S/N of the removed part." }
+  - { column: wo_part_on_off.batchno_off, name_status: unnamed, trust: documented, note: "B/N of the removed repairable consumable." }
+  - { column: wo_part_on_off.qty_off, name_status: unnamed, trust: documented }
+  - { column: wo_part_on_off.certificate_i, name_status: unnamed, trust: documented, note: "ID into the certificate table, which is not in the DWH." }
+notes:
+  - "Pickslip chain for one workstep part request: part_request_2 -> pickslip_detail (part_requestno_i) -> pickslip_booked (pickslipno + recno) -> history (pickslipseqno_i) and od_rec_detail (recdetailno_i)."
+  - "Not in the DWH catalogue (snapshot 2026-11-18): certificate, certificate_link, recdetail (not a CSV table), store, entity, label, picking_list."

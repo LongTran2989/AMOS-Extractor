@@ -7,6 +7,18 @@
 ```mermaid
 erDiagram
   part_request_2 }o--|| workstep_link : "part_request_2.event_key -> workstep_link.workstep_linkno_i"
+  part_request_info ||--|| part_request_2 : "part_request_info.part_requestno_i -> part_request_2.part_requestno_i"
+  pickslip_detail }o--|| part_request_2 : "pickslip_detail.part_requestno_i -> part_request_2.part_requestno_i"
+  pickslip_detail }o--|| pickslip_header : "pickslip_detail.pickslipno -> pickslip_header.pickslipno"
+  pickslip_header ||--o{ pickslip_detail : "pickslip_header.pickslipno -> pickslip_detail.pickslipno"
+  pickslip_booked }o--|| pickslip_detail : "pickslip_booked.pickslipno -> pickslip_detail.pickslipno"
+  pickslip_booked }o--|| od_rec_detail : "pickslip_booked.recdetailno_i -> od_rec_detail.recdetailno_i"
+  history }o--|| pickslip_booked : "history.pickslipseqno_i -> pickslip_booked.pickslipseqno_i"
+  od_detail }o--|| pickslip_detail : "od_detail.pickslipno -> pickslip_detail.pickslipno"
+  od_rec_detail }o--|| od_detail : "od_rec_detail.detailno_i -> od_detail.detailno_i"
+  allocation_link }o--|| part_request_2 : "allocation_link.source_key -> part_request_2.part_requestno_i"
+  allocation_link }o--|| od_detail : "allocation_link.ref_key -> od_detail.detailno_i"
+  wo_part_on_off }o--|| wo_text_action : "wo_part_on_off.actionno_i -> wo_text_action.actionno_i"
   time_captured ||--|| time_captured_additional : "time_captured.bookingno_i -> time_captured_additional.bookingno_i"
   time_captured ||--o{ time_captured_history : "time_captured.bookingno_i -> time_captured_history.bookingno_i"
   time_captured_additional }o--|| wo_text_action : "time_captured_additional.itemno_i -> wo_text_action.actionno_i"
@@ -34,12 +46,63 @@ Part requests (materials) for maintenance events (e.g. Worksteps)
 
 | Column | Name | Alias | Type | Trust | Notes/Meaning |
 |---|---|---|---|---|---|
-| `part_request_2.part_requestno_i` |  |  | INT (int4) | documented | Primary key of the part request. |
+| `part_request_2.part_requestno_i` | part_requestno_i | z_PART_REQUESTNO_I | INT (int4) | documented | Primary key of the part request. |
 | `part_request_2.partno` | part_no | z_PART_NO | PA (varchar(32)) | probed | The requested P/N. |
 | `part_request_2.qty` | part_qty | z_PART_QTY | DOUBLE (float8) | probed | The requested quantity of the part. |
 | `part_request_2.percentage` |  |  | INT (int4) | probed | The probability that the requested parts are required, ranging from 0% to 100%. |
 | `part_request_2.externally_provisioned` |  |  | ALPHANUM (varchar(1)) | probed | Flag to indicate if the provisioning of the part request is handled externally. |
 | `part_request_2.no_pcf` | part_no_pcf | z_PART_NO_PCF | BOOL (varchar(1)) | probed | "Y" if the part request must not appear in the Parts Consumption Forecast. |
+
+## pickslip
+
+Pickslips that issue the parts of a workstep part request, and the booking, receiving, order and stock-history rows behind them. Chain starts at part_request_2.part_requestno_i (see part_request.yaml).
+
+| Column | Name | Alias | Type | Trust | Notes/Meaning |
+|---|---|---|---|---|---|
+| `part_request_info.serialno` |  |  | UPPERCAS (varchar(20)) | documented | The requested S/N or B/N for the part request. |
+| `pickslip_detail.partno` |  |  | PA (varchar(32)) | documented | P/N of the requested part. |
+| `pickslip_detail.serialno` |  |  | ALPHANUM (varchar(20)) | documented | S/N of the requested part.  If the part is not serialized, this field will be blank. |
+| `pickslip_detail.qty_req` |  |  | DOUBLE (float8) | documented | Quantity of the part requested on the pickslip. |
+| `pickslip_detail.qty_booked` |  |  | DOUBLE (float8) | documented | Booked quantity for old pickslips (legacy AMOS data). |
+| `pickslip_detail.recno` |  |  | INT (int4) | documented | Record number for the requested part within the pickslip.  Also used in pickslip_booked table. This is part of the primary key. |
+| `pickslip_detail.part_requestno_i` |  |  | INT (int4) | documented | Foreign key linking to the part request that triggered this pickslip request. |
+| `pickslip_header.pickslip_date` |  |  | DATE (int4) | documented | Date of confirmation / booking as number of days since 31.Dec.1971. |
+| `pickslip_header.issue_date` |  |  | DATE (int4) | documented | Date of request as number of days since 31.Dec.1971. |
+| `pickslip_booked.pickslipseqno_i` |  |  | INT (int4) | documented | Unique sequence number for each record in the pickslip_booked table. |
+| `pickslip_booked.partno` |  |  | PA (varchar(32)) | documented | Part number of the booked part. |
+| `pickslip_booked.serialno` |  |  | ALPHANUM (varchar(20)) | documented | Serial number of the booked part. |
+| `pickslip_booked.batchno` |  |  | ALPHANUM (varchar(20)) | documented | Batch number of the booked part. |
+| `pickslip_booked.expire_date` |  |  | DATE (int4) | documented | Expiration date of the booked part, stored as days since 31.Dec.1971. |
+| `pickslip_booked.qty_booked` |  |  | DOUBLE (float8) | documented | Quantity of the part booked on the pickslip. |
+| `pickslip_booked.qty_canceled` |  |  | DOUBLE (float8) | documented | Quantity of the part cancelled via the Cancel Pickslip function. |
+| `pickslip_booked.recdetailno_i` |  |  | INT (int4) | documented | Foreign key to the recdetail table for the booked part. |
+| `pickslip_booked.storeno_i` |  |  | ST (int4) | documented | Foreign key to the store table (consumables, stock). |
+| `pickslip_booked.return_part_requestno_i` |  |  | PARTRQST (int4) | documented | Foreign key to the part_request_2 table (BOPartRequest). This is only used for parts "in return" (is_return = "Y"). |
+| `history.labelno` |  |  | LB (int4) | documented | Foreign key to label |
+| `history.serialno` |  |  | SERIALNO (varchar(20)) | documented | Serial number |
+| `history.batchno` |  |  | ALPHANUM (varchar(20)) | documented | Batch number of consumable. |
+| `history.qty` |  |  | QTY (float8) | documented | Quantity |
+| `history.certificate_date` |  |  | DATE (int4) | documented | Date of certification. |
+| `history.certificate_company` |  |  | VD (varchar(12)) | documented | Address of vendor who certificated the part. |
+| `od_detail.serialno` |  |  | SERIALNO (varchar(20)) | documented | Serial number of this detail. |
+| `od_detail.labelno` |  |  | INT (int4) | documented | Holds the labelno for consumables. Labelno for rotables will be taken from rotable table. |
+| `od_rec_detail.labelno` |  |  | LB (int4) | documented | The new label number of the received rotable. |
+| `od_rec_detail.batchno` |  |  | ALPHANUM (varchar(20)) | documented | The batch number of the consumable. |
+| `od_rec_detail.expire_date` |  |  | DATE (int4) | documented | The expiry date of consumables (number of days since 31.Dec.1971). |
+| `od_rec_detail.certificate_date` |  |  | DATE (int4) | documented | The certificate date defined during the receiving (number of days since 31.Dec.1971) |
+| `od_rec_detail.certificate_company` |  |  | VD (varchar(12)) | documented | The certificate company defined during the receiving |
+| `od_rec_detail.cert_type` |  |  | ALPHANUM (varchar(6)) | unusable | The certificate type of the received rotable. WARNING: Deprecated. Please use table Certificate |
+| `allocation_link.source_type` |  |  | ALPHANUM (varchar(16)) | documented | AMOS type of the source object. |
+| `allocation_link.ref_type` |  |  | ALPHANUM (varchar(16)) | documented | AMOS type of the referenced object: 'rotable' (ref_key is the PSN), 'consumable' (ref_key is the storeno_i), or 'orderdetail' (ref_key is the detailno_i). |
+| `allocation_link.ref_key` |  |  | INT (int4) | documented | Key of the referenced object: PSN for a rotable, storeno_i for a consumable, or detailno_i for an order detail. |
+| `allocation_link.qty` |  |  | DOUBLE (float8) | documented | Requested quantity for the association between the part request and the material or the order. |
+| `wo_part_on_off.labelno` |  |  | INT (int4) | documented | Label number of the installed part. |
+| `wo_part_on_off.serialno` |  |  | ALPHANUM (varchar(20)) | documented | S/N (Serial Number) of the installed part. |
+| `wo_part_on_off.partno_off` |  |  | PA (varchar(32)) | documented | P/N (Part Number) of the removed part. |
+| `wo_part_on_off.serialno_off` |  |  | ALPHANUM (varchar(20)) | documented | S/N (Serial Number) of the removed part. |
+| `wo_part_on_off.batchno_off` |  |  | ALPHANUM (varchar(20)) | documented | B/N (Batch Number) of the removed repairable consumable. Column might be null if the removed part on the Workorder is a Rotable, not Consumable. Column might be "empty (= blank String)" if the removed part on the Workorder is a Repairable Consumable, but no Batchnumber is given (not mandatory, see APN 1206 "Repairable Consumables Label Booking"). |
+| `wo_part_on_off.qty_off` |  |  | QTY (float8) | documented | Quantity of the removed repairable consumable. Column might be null, if the removed part on the Workorder is a Rotable, not Consumable. |
+| `wo_part_on_off.certificate_i` |  |  | CERT (int4) | documented | Foreign key to the certificate_i in the certificate table. |
 
 ## timebooking
 

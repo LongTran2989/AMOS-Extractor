@@ -9,8 +9,10 @@ tables:
       - { from: part_request_2.event_key, to: workstep_link.workstep_linkno_i, type: left, cardinality: "N:1", trust: probed, note: "Requires part_request_2.event_type = 'WSL' for Workstep level linkage" }
 fields:
   - column: part_request_2.part_requestno_i
-    name_status: unnamed
+    name_status: approved
+    name: part_requestno_i
     trust: documented
+    note: "Primary key of the part request. Join key from a workstep part request to pickslips, bookings, receiving and stock history (see pickslip.yaml). Approved by the user 2026-11-18."
   - column: part_request_2.partno
     name_status: approved
     name: part_no

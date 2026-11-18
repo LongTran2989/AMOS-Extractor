@@ -1191,7 +1191,7 @@
     },
     {
       "source": "extract_wp_seqs_by_wp_parts.sql",
-      "sourceSha256": "b752c2f2d496c1f101826edbf50eb132f8c699124592ce0a9ba55d15f3e5b8e5",
+      "sourceSha256": "0c504ee95bc92a63880ebe605b59fb38c8d6c453c2a172d33efcab5acc73942b",
       "status": "converted",
       "output": "queries/dwh/extract_wp_seqs_by_wp_parts.sql",
       "available": true,
@@ -1200,6 +1200,14 @@
         {
           "code": "W_RETYPED_COLUMN",
           "plain": "The column part_request_2.qty is float8 in AMOS but VARCHAR2 in the DWH. Its values may look different."
+        },
+        {
+          "code": "W_RETYPED_COLUMN",
+          "plain": "The column pickslip_booked.qty_booked is float8 in AMOS but VARCHAR2 in the DWH. Its values may look different."
+        },
+        {
+          "code": "W_RETYPED_COLUMN",
+          "plain": "The column pickslip_booked.qty_canceled is float8 in AMOS but VARCHAR2 in the DWH. Its values may look different."
         }
       ],
       "placeholders": [
@@ -1224,6 +1232,30 @@
         {
           "name": "z_PART_NO_PCF",
           "type": "text"
+        },
+        {
+          "name": "SERIALNO",
+          "type": "text"
+        },
+        {
+          "name": "PICKSLIPNO",
+          "type": "text"
+        },
+        {
+          "name": "QTY_BOOKED",
+          "type": "float"
+        },
+        {
+          "name": "QTY_CANCELED",
+          "type": "float"
+        },
+        {
+          "name": "BATCHNO",
+          "type": "text"
+        },
+        {
+          "name": "EXPIRE_DATE",
+          "type": "int"
         }
       ],
       "orderKeys": [],
@@ -1231,8 +1263,20 @@
         "part_request_2.event_key",
         "part_request_2.event_type",
         "part_request_2.no_pcf",
+        "part_request_2.part_requestno_i",
         "part_request_2.partno",
         "part_request_2.qty",
+        "part_request_info.part_requestno_i",
+        "part_request_info.serialno",
+        "pickslip_booked.batchno",
+        "pickslip_booked.expire_date",
+        "pickslip_booked.pickslipno",
+        "pickslip_booked.qty_booked",
+        "pickslip_booked.qty_canceled",
+        "pickslip_booked.recno",
+        "pickslip_detail.part_requestno_i",
+        "pickslip_detail.pickslipno",
+        "pickslip_detail.recno",
         "wo_header.event_perfno_i",
         "workstep_link.event_perfno_i",
         "workstep_link.workstep_linkno_i",
@@ -1241,7 +1285,7 @@
         "wp_header.wpno",
         "wp_header.wpno_i"
       ],
-      "execLength": 648
+      "execLength": 1184
     },
     {
       "source": "extract_wp_seqs_by_wp_steps.sql",
@@ -2591,6 +2635,1689 @@
         "wp_status.wp_status_id"
       ],
       "execLength": 3043
+    },
+    {
+      "source": "extract_wp_trace_allocated_consumables.sql",
+      "sourceSha256": "ac521469b204dcf9fb765cf2738273c19285aa24123786dd16ca8b986cc92053",
+      "status": "converted",
+      "output": "queries/dwh/extract_wp_trace_allocated_consumables.sql",
+      "available": true,
+      "missing": [],
+      "warnings": [
+        {
+          "code": "W_RETYPED_COLUMN",
+          "plain": "The column consumables.qty is float8 in AMOS but VARCHAR2 in the DWH. Its values may look different."
+        }
+      ],
+      "placeholders": [
+        {
+          "name": "WP_NAME",
+          "maxLength": 100
+        }
+      ],
+      "outputs": [
+        {
+          "name": "STORENO_I",
+          "type": "int"
+        },
+        {
+          "name": "PARTNO",
+          "type": "text"
+        },
+        {
+          "name": "LABELNO",
+          "type": "int"
+        },
+        {
+          "name": "BATCHNO",
+          "type": "text"
+        },
+        {
+          "name": "EXPIRE_DATE",
+          "type": "int"
+        },
+        {
+          "name": "QTY",
+          "type": "float"
+        },
+        {
+          "name": "CONDITION",
+          "type": "text"
+        },
+        {
+          "name": "LOCATIONNO_I",
+          "type": "int"
+        },
+        {
+          "name": "RECDETAILNO_I",
+          "type": "int"
+        },
+        {
+          "name": "PURCH_RECDETAILNO_I",
+          "type": "int"
+        },
+        {
+          "name": "OWNER",
+          "type": "text"
+        },
+        {
+          "name": "PROJECTNO_I",
+          "type": "int"
+        },
+        {
+          "name": "ENTITYNO_I",
+          "type": "int"
+        },
+        {
+          "name": "SHELF_INSPECTION_DATE",
+          "type": "int"
+        },
+        {
+          "name": "STATUS",
+          "type": "int"
+        }
+      ],
+      "orderKeys": [],
+      "usedColumns": [
+        "allocation_link.ref_key",
+        "allocation_link.ref_type",
+        "allocation_link.source_key",
+        "allocation_link.source_type",
+        "consumables.batchno",
+        "consumables.condition",
+        "consumables.entityno_i",
+        "consumables.expire_date",
+        "consumables.labelno",
+        "consumables.locationno_i",
+        "consumables.owner",
+        "consumables.partno",
+        "consumables.projectno_i",
+        "consumables.purch_recdetailno_i",
+        "consumables.qty",
+        "consumables.recdetailno_i",
+        "consumables.shelf_inspection_date",
+        "consumables.status",
+        "consumables.storeno_i",
+        "part_request_2.event_key",
+        "part_request_2.event_type",
+        "part_request_2.part_requestno_i",
+        "wo_header.event_perfno_i",
+        "workstep_link.event_perfno_i",
+        "workstep_link.workstep_linkno_i",
+        "wp_assignment.event_perfno_i",
+        "wp_assignment.wpno_i",
+        "wp_header.wpno",
+        "wp_header.wpno_i"
+      ],
+      "execLength": 1124
+    },
+    {
+      "source": "extract_wp_trace_allocated_order_details.sql",
+      "sourceSha256": "7422ebd048899e4395a5dd8a6eca80d15bae422f386a7109f3e67caae36cfd9f",
+      "status": "converted",
+      "output": "queries/dwh/extract_wp_trace_allocated_order_details.sql",
+      "available": true,
+      "missing": [],
+      "warnings": [
+        {
+          "code": "W_RETYPED_COLUMN",
+          "plain": "The column od_detail.qty is float8 in AMOS but VARCHAR2 in the DWH. Its values may look different."
+        },
+        {
+          "code": "W_RETYPED_COLUMN",
+          "plain": "The column od_detail.req_qty is float8 in AMOS but VARCHAR2 in the DWH. Its values may look different."
+        },
+        {
+          "code": "W_RETYPED_COLUMN",
+          "plain": "The column od_detail.ext_qty is float8 in AMOS but VARCHAR2 in the DWH. Its values may look different."
+        }
+      ],
+      "placeholders": [
+        {
+          "name": "WP_NAME",
+          "maxLength": 100
+        }
+      ],
+      "outputs": [
+        {
+          "name": "DETAILNO_I",
+          "type": "int"
+        },
+        {
+          "name": "ORDERNO_I",
+          "type": "int"
+        },
+        {
+          "name": "POSNO",
+          "type": "int"
+        },
+        {
+          "name": "PICKSLIPNO",
+          "type": "text"
+        },
+        {
+          "name": "PICKSLIPSEQNO_I",
+          "type": "int"
+        },
+        {
+          "name": "PARTNO",
+          "type": "text"
+        },
+        {
+          "name": "SERIALNO",
+          "type": "text"
+        },
+        {
+          "name": "REQUESTED_PARTNO",
+          "type": "text"
+        },
+        {
+          "name": "REQUESTED_SERIALNO",
+          "type": "text"
+        },
+        {
+          "name": "QTY",
+          "type": "float"
+        },
+        {
+          "name": "REQ_QTY",
+          "type": "float"
+        },
+        {
+          "name": "EXT_QTY",
+          "type": "float"
+        },
+        {
+          "name": "LABELNO",
+          "type": "int"
+        },
+        {
+          "name": "RECDETAILNO_I",
+          "type": "int"
+        },
+        {
+          "name": "CONDITION",
+          "type": "text"
+        },
+        {
+          "name": "STATE",
+          "type": "text"
+        },
+        {
+          "name": "TARGET_DATE",
+          "type": "int"
+        },
+        {
+          "name": "DEL_DATE",
+          "type": "int"
+        },
+        {
+          "name": "STATUS",
+          "type": "int"
+        }
+      ],
+      "orderKeys": [],
+      "usedColumns": [
+        "allocation_link.ref_key",
+        "allocation_link.ref_type",
+        "allocation_link.source_key",
+        "allocation_link.source_type",
+        "od_detail.condition",
+        "od_detail.del_date",
+        "od_detail.detailno_i",
+        "od_detail.ext_qty",
+        "od_detail.labelno",
+        "od_detail.orderno_i",
+        "od_detail.partno",
+        "od_detail.pickslipno",
+        "od_detail.pickslipseqno_i",
+        "od_detail.posno",
+        "od_detail.qty",
+        "od_detail.recdetailno_i",
+        "od_detail.req_qty",
+        "od_detail.requested_partno",
+        "od_detail.requested_serialno",
+        "od_detail.serialno",
+        "od_detail.state",
+        "od_detail.status",
+        "od_detail.target_date",
+        "part_request_2.event_key",
+        "part_request_2.event_type",
+        "part_request_2.part_requestno_i",
+        "wo_header.event_perfno_i",
+        "workstep_link.event_perfno_i",
+        "workstep_link.workstep_linkno_i",
+        "wp_assignment.event_perfno_i",
+        "wp_assignment.wpno_i",
+        "wp_header.wpno",
+        "wp_header.wpno_i"
+      ],
+      "execLength": 1169
+    },
+    {
+      "source": "extract_wp_trace_allocated_receipts.sql",
+      "sourceSha256": "bd08eb6f29b4eab4d51a6728d421fedfc11f081d0af3ee4ab1b5a79771764905",
+      "status": "converted",
+      "output": "queries/dwh/extract_wp_trace_allocated_receipts.sql",
+      "available": true,
+      "missing": [],
+      "warnings": [
+        {
+          "code": "W_RETYPED_COLUMN",
+          "plain": "The column od_rec_detail.qty is float8 in AMOS but VARCHAR2 in the DWH. Its values may look different."
+        }
+      ],
+      "placeholders": [
+        {
+          "name": "WP_NAME",
+          "maxLength": 100
+        }
+      ],
+      "outputs": [
+        {
+          "name": "RECDETAILNO_I",
+          "type": "int"
+        },
+        {
+          "name": "DETAILNO_I",
+          "type": "int"
+        },
+        {
+          "name": "RECEIVINGNO",
+          "type": "int"
+        },
+        {
+          "name": "RECNO",
+          "type": "int"
+        },
+        {
+          "name": "ORDERNO",
+          "type": "text"
+        },
+        {
+          "name": "DEL_DATE",
+          "type": "int"
+        },
+        {
+          "name": "PARTNO",
+          "type": "text"
+        },
+        {
+          "name": "SERIALNO",
+          "type": "text"
+        },
+        {
+          "name": "QTY",
+          "type": "float"
+        },
+        {
+          "name": "LABELNO",
+          "type": "int"
+        },
+        {
+          "name": "BATCHNO",
+          "type": "text"
+        },
+        {
+          "name": "EXPIRE_DATE",
+          "type": "int"
+        },
+        {
+          "name": "MFG_DATE",
+          "type": "int"
+        },
+        {
+          "name": "CERTIFICATE_DATE",
+          "type": "int"
+        },
+        {
+          "name": "CERTIFICATE_COMPANY",
+          "type": "text"
+        },
+        {
+          "name": "CERT_TYPE",
+          "type": "text"
+        },
+        {
+          "name": "RELEASENO",
+          "type": "text"
+        },
+        {
+          "name": "VENDOR",
+          "type": "text"
+        },
+        {
+          "name": "STATUS",
+          "type": "int"
+        }
+      ],
+      "orderKeys": [],
+      "usedColumns": [
+        "allocation_link.ref_key",
+        "allocation_link.ref_type",
+        "allocation_link.source_key",
+        "allocation_link.source_type",
+        "consumables.recdetailno_i",
+        "consumables.storeno_i",
+        "od_rec_detail.batchno",
+        "od_rec_detail.cert_type",
+        "od_rec_detail.certificate_company",
+        "od_rec_detail.certificate_date",
+        "od_rec_detail.del_date",
+        "od_rec_detail.detailno_i",
+        "od_rec_detail.expire_date",
+        "od_rec_detail.labelno",
+        "od_rec_detail.mfg_date",
+        "od_rec_detail.orderno",
+        "od_rec_detail.partno",
+        "od_rec_detail.qty",
+        "od_rec_detail.recdetailno_i",
+        "od_rec_detail.receivingno",
+        "od_rec_detail.recno",
+        "od_rec_detail.releaseno",
+        "od_rec_detail.serialno",
+        "od_rec_detail.status",
+        "od_rec_detail.vendor",
+        "part_request_2.event_key",
+        "part_request_2.event_type",
+        "part_request_2.part_requestno_i",
+        "wo_header.event_perfno_i",
+        "workstep_link.event_perfno_i",
+        "workstep_link.workstep_linkno_i",
+        "wp_assignment.event_perfno_i",
+        "wp_assignment.wpno_i",
+        "wp_header.wpno",
+        "wp_header.wpno_i"
+      ],
+      "execLength": 1340
+    },
+    {
+      "source": "extract_wp_trace_allocated_rotables.sql",
+      "sourceSha256": "ff566b21007d57fed5f12a596fc79bb0b8ca291aeca8a97dee99c504c8e050a9",
+      "status": "converted",
+      "output": "queries/dwh/extract_wp_trace_allocated_rotables.sql",
+      "available": true,
+      "missing": [],
+      "warnings": [],
+      "placeholders": [
+        {
+          "name": "WP_NAME",
+          "maxLength": 100
+        }
+      ],
+      "outputs": [
+        {
+          "name": "PSN",
+          "type": "int"
+        },
+        {
+          "name": "PARTNO",
+          "type": "text"
+        },
+        {
+          "name": "SERIALNO",
+          "type": "text"
+        },
+        {
+          "name": "LABELNO",
+          "type": "int"
+        },
+        {
+          "name": "PARTNONEW",
+          "type": "text"
+        },
+        {
+          "name": "SERIALNONEW",
+          "type": "text"
+        },
+        {
+          "name": "CONDITION",
+          "type": "text"
+        },
+        {
+          "name": "LOCATION",
+          "type": "text"
+        },
+        {
+          "name": "LOCATIONNO_I",
+          "type": "int"
+        },
+        {
+          "name": "DATE_INST",
+          "type": "int"
+        },
+        {
+          "name": "EXPIRY_DATE",
+          "type": "int"
+        },
+        {
+          "name": "ROTABLE_STATUS",
+          "type": "int"
+        },
+        {
+          "name": "STATUS",
+          "type": "int"
+        }
+      ],
+      "orderKeys": [],
+      "usedColumns": [
+        "allocation_link.ref_key",
+        "allocation_link.ref_type",
+        "allocation_link.source_key",
+        "allocation_link.source_type",
+        "part_request_2.event_key",
+        "part_request_2.event_type",
+        "part_request_2.part_requestno_i",
+        "rotables.condition",
+        "rotables.date_inst",
+        "rotables.expiry_date",
+        "rotables.labelno",
+        "rotables.location",
+        "rotables.locationno_i",
+        "rotables.partno",
+        "rotables.partnonew",
+        "rotables.psn",
+        "rotables.rotable_status",
+        "rotables.serialno",
+        "rotables.serialnonew",
+        "rotables.status",
+        "wo_header.event_perfno_i",
+        "workstep_link.event_perfno_i",
+        "workstep_link.workstep_linkno_i",
+        "wp_assignment.event_perfno_i",
+        "wp_assignment.wpno_i",
+        "wp_header.wpno",
+        "wp_header.wpno_i"
+      ],
+      "execLength": 1009
+    },
+    {
+      "source": "extract_wp_trace_allocation_links.sql",
+      "sourceSha256": "3108719bbe7d5f779754678e5d7da167941b6f5c6560d85bd3b531c7f143a880",
+      "status": "converted",
+      "output": "queries/dwh/extract_wp_trace_allocation_links.sql",
+      "available": true,
+      "missing": [],
+      "warnings": [
+        {
+          "code": "W_RETYPED_COLUMN",
+          "plain": "The column allocation_link.qty is float8 in AMOS but VARCHAR2 in the DWH. Its values may look different."
+        }
+      ],
+      "placeholders": [
+        {
+          "name": "WP_NAME",
+          "maxLength": 100
+        }
+      ],
+      "outputs": [
+        {
+          "name": "ALLOCATION_LINKNO_I",
+          "type": "int"
+        },
+        {
+          "name": "SOURCE_TYPE",
+          "type": "text"
+        },
+        {
+          "name": "SOURCE_KEY",
+          "type": "int"
+        },
+        {
+          "name": "LINK_TYPE",
+          "type": "text"
+        },
+        {
+          "name": "REF_TYPE",
+          "type": "text"
+        },
+        {
+          "name": "REF_KEY",
+          "type": "int"
+        },
+        {
+          "name": "QTY",
+          "type": "float"
+        },
+        {
+          "name": "IS_CONSUMPTION_EVENT",
+          "type": "text"
+        },
+        {
+          "name": "APPROVAL_DOCUMENTNO_I",
+          "type": "int"
+        },
+        {
+          "name": "STATUS",
+          "type": "int"
+        },
+        {
+          "name": "MUTATION",
+          "type": "int"
+        }
+      ],
+      "orderKeys": [],
+      "usedColumns": [
+        "allocation_link.allocation_linkno_i",
+        "allocation_link.approval_documentno_i",
+        "allocation_link.is_consumption_event",
+        "allocation_link.link_type",
+        "allocation_link.mutation",
+        "allocation_link.qty",
+        "allocation_link.ref_key",
+        "allocation_link.ref_type",
+        "allocation_link.source_key",
+        "allocation_link.source_type",
+        "allocation_link.status",
+        "part_request_2.event_key",
+        "part_request_2.event_type",
+        "part_request_2.part_requestno_i",
+        "wo_header.event_perfno_i",
+        "workstep_link.event_perfno_i",
+        "workstep_link.workstep_linkno_i",
+        "wp_assignment.event_perfno_i",
+        "wp_assignment.wpno_i",
+        "wp_header.wpno",
+        "wp_header.wpno_i"
+      ],
+      "execLength": 904
+    },
+    {
+      "source": "extract_wp_trace_history.sql",
+      "sourceSha256": "6b07912fa361175dab6ce833942f5d57e23626b8734143c0d05a8f896c241450",
+      "status": "converted",
+      "output": "queries/dwh/extract_wp_trace_history.sql",
+      "available": true,
+      "missing": [],
+      "warnings": [
+        {
+          "code": "W_RETYPED_COLUMN",
+          "plain": "The column history.qty is float8 in AMOS but VARCHAR2 in the DWH. Its values may look different."
+        }
+      ],
+      "placeholders": [
+        {
+          "name": "WP_NAME",
+          "maxLength": 100
+        }
+      ],
+      "outputs": [
+        {
+          "name": "HISTORYNO_I",
+          "type": "int"
+        },
+        {
+          "name": "PICKSLIPSEQNO_I",
+          "type": "int"
+        },
+        {
+          "name": "TRANSACTION_ID",
+          "type": "int"
+        },
+        {
+          "name": "PARTNO",
+          "type": "text"
+        },
+        {
+          "name": "SERIALNO",
+          "type": "text"
+        },
+        {
+          "name": "LABELNO",
+          "type": "int"
+        },
+        {
+          "name": "BATCHNO",
+          "type": "text"
+        },
+        {
+          "name": "EXPIRE_DATE",
+          "type": "int"
+        },
+        {
+          "name": "QTY",
+          "type": "float"
+        },
+        {
+          "name": "CERTIFICATE_DATE",
+          "type": "int"
+        },
+        {
+          "name": "CERTIFICATE_COMPANY",
+          "type": "text"
+        },
+        {
+          "name": "RECDETAILNO_I",
+          "type": "int"
+        },
+        {
+          "name": "STORE",
+          "type": "text"
+        },
+        {
+          "name": "STORENO_I",
+          "type": "int"
+        },
+        {
+          "name": "STORE_LOC",
+          "type": "text"
+        },
+        {
+          "name": "DEL_DATE",
+          "type": "int"
+        },
+        {
+          "name": "ORDERNO",
+          "type": "text"
+        },
+        {
+          "name": "EVENT_PERFNO_I",
+          "type": "int"
+        },
+        {
+          "name": "WPNO_I",
+          "type": "int"
+        },
+        {
+          "name": "STATUS",
+          "type": "int"
+        },
+        {
+          "name": "MUTATION",
+          "type": "int"
+        }
+      ],
+      "orderKeys": [],
+      "usedColumns": [
+        "history.batchno",
+        "history.certificate_company",
+        "history.certificate_date",
+        "history.del_date",
+        "history.event_perfno_i",
+        "history.expire_date",
+        "history.historyno_i",
+        "history.labelno",
+        "history.mutation",
+        "history.orderno",
+        "history.partno",
+        "history.pickslipseqno_i",
+        "history.qty",
+        "history.recdetailno_i",
+        "history.serialno",
+        "history.status",
+        "history.store",
+        "history.store_loc",
+        "history.storeno_i",
+        "history.transaction_id",
+        "history.wpno_i",
+        "part_request_2.event_key",
+        "part_request_2.event_type",
+        "part_request_2.part_requestno_i",
+        "pickslip_booked.pickslipno",
+        "pickslip_booked.pickslipseqno_i",
+        "pickslip_booked.recno",
+        "pickslip_detail.part_requestno_i",
+        "pickslip_detail.pickslipno",
+        "pickslip_detail.recno",
+        "wo_header.event_perfno_i",
+        "workstep_link.event_perfno_i",
+        "workstep_link.workstep_linkno_i",
+        "wp_assignment.event_perfno_i",
+        "wp_assignment.wpno_i",
+        "wp_header.wpno",
+        "wp_header.wpno_i"
+      ],
+      "execLength": 1272
+    },
+    {
+      "source": "extract_wp_trace_od_details.sql",
+      "sourceSha256": "ba1da343f78ad76190615d513f4225a7be666ad182fa37b3b49e54ab6b646ab6",
+      "status": "converted",
+      "output": "queries/dwh/extract_wp_trace_od_details.sql",
+      "available": true,
+      "missing": [],
+      "warnings": [
+        {
+          "code": "W_RETYPED_COLUMN",
+          "plain": "The column od_detail.qty is float8 in AMOS but VARCHAR2 in the DWH. Its values may look different."
+        },
+        {
+          "code": "W_RETYPED_COLUMN",
+          "plain": "The column od_detail.req_qty is float8 in AMOS but VARCHAR2 in the DWH. Its values may look different."
+        },
+        {
+          "code": "W_RETYPED_COLUMN",
+          "plain": "The column od_detail.ext_qty is float8 in AMOS but VARCHAR2 in the DWH. Its values may look different."
+        }
+      ],
+      "placeholders": [
+        {
+          "name": "WP_NAME",
+          "maxLength": 100
+        }
+      ],
+      "outputs": [
+        {
+          "name": "DETAILNO_I",
+          "type": "int"
+        },
+        {
+          "name": "ORDERNO_I",
+          "type": "int"
+        },
+        {
+          "name": "POSNO",
+          "type": "int"
+        },
+        {
+          "name": "PICKSLIPNO",
+          "type": "text"
+        },
+        {
+          "name": "PICKSLIPSEQNO_I",
+          "type": "int"
+        },
+        {
+          "name": "PARTNO",
+          "type": "text"
+        },
+        {
+          "name": "SERIALNO",
+          "type": "text"
+        },
+        {
+          "name": "REQUESTED_PARTNO",
+          "type": "text"
+        },
+        {
+          "name": "REQUESTED_SERIALNO",
+          "type": "text"
+        },
+        {
+          "name": "QTY",
+          "type": "float"
+        },
+        {
+          "name": "REQ_QTY",
+          "type": "float"
+        },
+        {
+          "name": "EXT_QTY",
+          "type": "float"
+        },
+        {
+          "name": "LABELNO",
+          "type": "int"
+        },
+        {
+          "name": "RECDETAILNO_I",
+          "type": "int"
+        },
+        {
+          "name": "CONDITION",
+          "type": "text"
+        },
+        {
+          "name": "STATE",
+          "type": "text"
+        },
+        {
+          "name": "TARGET_DATE",
+          "type": "int"
+        },
+        {
+          "name": "DEL_DATE",
+          "type": "int"
+        },
+        {
+          "name": "STATUS",
+          "type": "int"
+        }
+      ],
+      "orderKeys": [],
+      "usedColumns": [
+        "od_detail.condition",
+        "od_detail.del_date",
+        "od_detail.detailno_i",
+        "od_detail.ext_qty",
+        "od_detail.labelno",
+        "od_detail.orderno_i",
+        "od_detail.partno",
+        "od_detail.pickslipno",
+        "od_detail.pickslipseqno_i",
+        "od_detail.posno",
+        "od_detail.qty",
+        "od_detail.recdetailno_i",
+        "od_detail.req_qty",
+        "od_detail.requested_partno",
+        "od_detail.requested_serialno",
+        "od_detail.serialno",
+        "od_detail.state",
+        "od_detail.status",
+        "od_detail.target_date",
+        "part_request_2.event_key",
+        "part_request_2.event_type",
+        "part_request_2.part_requestno_i",
+        "pickslip_detail.part_requestno_i",
+        "pickslip_detail.pickslipno",
+        "wo_header.event_perfno_i",
+        "workstep_link.event_perfno_i",
+        "workstep_link.workstep_linkno_i",
+        "wp_assignment.event_perfno_i",
+        "wp_assignment.wpno_i",
+        "wp_header.wpno",
+        "wp_header.wpno_i"
+      ],
+      "execLength": 1083
+    },
+    {
+      "source": "extract_wp_trace_od_rec_details.sql",
+      "sourceSha256": "a5f595161bb6245e6168e831a7f8dec0933497d35c883874cc5ecc3b908a8a7d",
+      "status": "converted",
+      "output": "queries/dwh/extract_wp_trace_od_rec_details.sql",
+      "available": true,
+      "missing": [],
+      "warnings": [
+        {
+          "code": "W_RETYPED_COLUMN",
+          "plain": "The column od_rec_detail.qty is float8 in AMOS but VARCHAR2 in the DWH. Its values may look different."
+        }
+      ],
+      "placeholders": [
+        {
+          "name": "WP_NAME",
+          "maxLength": 100
+        }
+      ],
+      "outputs": [
+        {
+          "name": "RECDETAILNO_I",
+          "type": "int"
+        },
+        {
+          "name": "DETAILNO_I",
+          "type": "int"
+        },
+        {
+          "name": "RECEIVINGNO",
+          "type": "int"
+        },
+        {
+          "name": "RECNO",
+          "type": "int"
+        },
+        {
+          "name": "ORDERNO",
+          "type": "text"
+        },
+        {
+          "name": "DEL_DATE",
+          "type": "int"
+        },
+        {
+          "name": "PARTNO",
+          "type": "text"
+        },
+        {
+          "name": "SERIALNO",
+          "type": "text"
+        },
+        {
+          "name": "PARTNOOLD",
+          "type": "text"
+        },
+        {
+          "name": "SERIALNOOLD",
+          "type": "text"
+        },
+        {
+          "name": "QTY",
+          "type": "float"
+        },
+        {
+          "name": "LABELNO",
+          "type": "int"
+        },
+        {
+          "name": "BATCHNO",
+          "type": "text"
+        },
+        {
+          "name": "EXPIRE_DATE",
+          "type": "int"
+        },
+        {
+          "name": "MFG_DATE",
+          "type": "int"
+        },
+        {
+          "name": "CERTIFICATE_DATE",
+          "type": "int"
+        },
+        {
+          "name": "CERTIFICATE_COMPANY",
+          "type": "text"
+        },
+        {
+          "name": "CERT_TYPE",
+          "type": "text"
+        },
+        {
+          "name": "RELEASENO",
+          "type": "text"
+        },
+        {
+          "name": "VENDOR",
+          "type": "text"
+        },
+        {
+          "name": "CONDITION",
+          "type": "text"
+        },
+        {
+          "name": "STATUS",
+          "type": "int"
+        }
+      ],
+      "orderKeys": [],
+      "usedColumns": [
+        "od_rec_detail.batchno",
+        "od_rec_detail.cert_type",
+        "od_rec_detail.certificate_company",
+        "od_rec_detail.certificate_date",
+        "od_rec_detail.condition",
+        "od_rec_detail.del_date",
+        "od_rec_detail.detailno_i",
+        "od_rec_detail.expire_date",
+        "od_rec_detail.labelno",
+        "od_rec_detail.mfg_date",
+        "od_rec_detail.orderno",
+        "od_rec_detail.partno",
+        "od_rec_detail.partnoold",
+        "od_rec_detail.qty",
+        "od_rec_detail.recdetailno_i",
+        "od_rec_detail.receivingno",
+        "od_rec_detail.recno",
+        "od_rec_detail.releaseno",
+        "od_rec_detail.serialno",
+        "od_rec_detail.serialnoold",
+        "od_rec_detail.status",
+        "od_rec_detail.vendor",
+        "part_request_2.event_key",
+        "part_request_2.event_type",
+        "part_request_2.part_requestno_i",
+        "pickslip_booked.pickslipno",
+        "pickslip_booked.recdetailno_i",
+        "pickslip_booked.recno",
+        "pickslip_detail.part_requestno_i",
+        "pickslip_detail.pickslipno",
+        "pickslip_detail.recno",
+        "wo_header.event_perfno_i",
+        "workstep_link.event_perfno_i",
+        "workstep_link.workstep_linkno_i",
+        "wp_assignment.event_perfno_i",
+        "wp_assignment.wpno_i",
+        "wp_header.wpno",
+        "wp_header.wpno_i"
+      ],
+      "execLength": 1418
+    },
+    {
+      "source": "extract_wp_trace_part_requests.sql",
+      "sourceSha256": "670a40914f719a87bb69933c8264e8c7bfb4d332a2ea70e77731b3f885b55f16",
+      "status": "converted",
+      "output": "queries/dwh/extract_wp_trace_part_requests.sql",
+      "available": true,
+      "missing": [],
+      "warnings": [
+        {
+          "code": "W_RETYPED_COLUMN",
+          "plain": "The column part_request_2.qty is float8 in AMOS but VARCHAR2 in the DWH. Its values may look different."
+        },
+        {
+          "code": "W_RETYPED_COLUMN",
+          "plain": "The column part_request_2.confirmed_qty is float8 in AMOS but VARCHAR2 in the DWH. Its values may look different."
+        }
+      ],
+      "placeholders": [
+        {
+          "name": "WP_NAME",
+          "maxLength": 100
+        }
+      ],
+      "outputs": [
+        {
+          "name": "z_PART_REQUESTNO_I",
+          "type": "int"
+        },
+        {
+          "name": "EVENT_KEY",
+          "type": "int"
+        },
+        {
+          "name": "z_PART_NO",
+          "type": "text"
+        },
+        {
+          "name": "z_PART_QTY",
+          "type": "float"
+        },
+        {
+          "name": "CONFIRMED_QTY",
+          "type": "float"
+        },
+        {
+          "name": "PARENT_PART_REQUESTNO_I",
+          "type": "int"
+        },
+        {
+          "name": "SERIALNO",
+          "type": "text"
+        },
+        {
+          "name": "EXTERNAL_REFERENCENO",
+          "type": "text"
+        }
+      ],
+      "orderKeys": [],
+      "usedColumns": [
+        "part_request_2.confirmed_qty",
+        "part_request_2.event_key",
+        "part_request_2.event_type",
+        "part_request_2.parent_part_requestno_i",
+        "part_request_2.part_requestno_i",
+        "part_request_2.partno",
+        "part_request_2.qty",
+        "part_request_info.external_referenceno",
+        "part_request_info.part_requestno_i",
+        "part_request_info.serialno",
+        "wo_header.event_perfno_i",
+        "workstep_link.event_perfno_i",
+        "workstep_link.workstep_linkno_i",
+        "wp_assignment.event_perfno_i",
+        "wp_assignment.wpno_i",
+        "wp_header.wpno",
+        "wp_header.wpno_i"
+      ],
+      "execLength": 881
+    },
+    {
+      "source": "extract_wp_trace_pickslip_booked.sql",
+      "sourceSha256": "7b080fa7f47ab8cb3d83a4e34803b484bc346f7fefd73849d4d66655ed27d400",
+      "status": "converted",
+      "output": "queries/dwh/extract_wp_trace_pickslip_booked.sql",
+      "available": true,
+      "missing": [],
+      "warnings": [
+        {
+          "code": "W_RETYPED_COLUMN",
+          "plain": "The column pickslip_booked.qty_booked is float8 in AMOS but VARCHAR2 in the DWH. Its values may look different."
+        },
+        {
+          "code": "W_RETYPED_COLUMN",
+          "plain": "The column pickslip_booked.qty_sys is float8 in AMOS but VARCHAR2 in the DWH. Its values may look different."
+        },
+        {
+          "code": "W_RETYPED_COLUMN",
+          "plain": "The column pickslip_booked.qty_canceled is float8 in AMOS but VARCHAR2 in the DWH. Its values may look different."
+        }
+      ],
+      "placeholders": [
+        {
+          "name": "WP_NAME",
+          "maxLength": 100
+        }
+      ],
+      "outputs": [
+        {
+          "name": "PICKSLIPSEQNO_I",
+          "type": "int"
+        },
+        {
+          "name": "PICKSLIPNO",
+          "type": "text"
+        },
+        {
+          "name": "RECNO",
+          "type": "int"
+        },
+        {
+          "name": "PARTNO",
+          "type": "text"
+        },
+        {
+          "name": "SERIALNO",
+          "type": "text"
+        },
+        {
+          "name": "BATCHNO",
+          "type": "text"
+        },
+        {
+          "name": "EXPIRE_DATE",
+          "type": "int"
+        },
+        {
+          "name": "QTY_BOOKED",
+          "type": "float"
+        },
+        {
+          "name": "QTY_SYS",
+          "type": "float"
+        },
+        {
+          "name": "QTY_CANCELED",
+          "type": "float"
+        },
+        {
+          "name": "STATION",
+          "type": "text"
+        },
+        {
+          "name": "STORE",
+          "type": "text"
+        },
+        {
+          "name": "STORENO_I",
+          "type": "int"
+        },
+        {
+          "name": "LOCATION_FROM",
+          "type": "text"
+        },
+        {
+          "name": "LOCATION_TO",
+          "type": "text"
+        },
+        {
+          "name": "RECDETAILNO_I",
+          "type": "int"
+        },
+        {
+          "name": "PURCH_RECDETAILNO_I",
+          "type": "int"
+        },
+        {
+          "name": "PROJECTNO_I",
+          "type": "int"
+        },
+        {
+          "name": "OWNER",
+          "type": "text"
+        },
+        {
+          "name": "ENTITYNO_I",
+          "type": "int"
+        },
+        {
+          "name": "PICKING_LISTNO_I",
+          "type": "int"
+        },
+        {
+          "name": "IS_CONSUMPTION",
+          "type": "text"
+        },
+        {
+          "name": "IS_RETURN",
+          "type": "text"
+        },
+        {
+          "name": "RETURN_PART_REQUESTNO_I",
+          "type": "int"
+        },
+        {
+          "name": "STATUS",
+          "type": "int"
+        },
+        {
+          "name": "CREATED_DATE",
+          "type": "int"
+        }
+      ],
+      "orderKeys": [],
+      "usedColumns": [
+        "part_request_2.event_key",
+        "part_request_2.event_type",
+        "part_request_2.part_requestno_i",
+        "pickslip_booked.batchno",
+        "pickslip_booked.created_date",
+        "pickslip_booked.entityno_i",
+        "pickslip_booked.expire_date",
+        "pickslip_booked.is_consumption",
+        "pickslip_booked.is_return",
+        "pickslip_booked.location_from",
+        "pickslip_booked.location_to",
+        "pickslip_booked.owner",
+        "pickslip_booked.partno",
+        "pickslip_booked.picking_listno_i",
+        "pickslip_booked.pickslipno",
+        "pickslip_booked.pickslipseqno_i",
+        "pickslip_booked.projectno_i",
+        "pickslip_booked.purch_recdetailno_i",
+        "pickslip_booked.qty_booked",
+        "pickslip_booked.qty_canceled",
+        "pickslip_booked.qty_sys",
+        "pickslip_booked.recdetailno_i",
+        "pickslip_booked.recno",
+        "pickslip_booked.return_part_requestno_i",
+        "pickslip_booked.serialno",
+        "pickslip_booked.station",
+        "pickslip_booked.status",
+        "pickslip_booked.store",
+        "pickslip_booked.storeno_i",
+        "pickslip_detail.part_requestno_i",
+        "pickslip_detail.pickslipno",
+        "pickslip_detail.recno",
+        "wo_header.event_perfno_i",
+        "workstep_link.event_perfno_i",
+        "workstep_link.workstep_linkno_i",
+        "wp_assignment.event_perfno_i",
+        "wp_assignment.wpno_i",
+        "wp_header.wpno",
+        "wp_header.wpno_i"
+      ],
+      "execLength": 1504
+    },
+    {
+      "source": "extract_wp_trace_pickslip_by_wo.sql",
+      "sourceSha256": "103834125846fcd0309932b9428fcc49ab9b8414115d6da2d0543e268238927f",
+      "status": "converted",
+      "output": "queries/dwh/extract_wp_trace_pickslip_by_wo.sql",
+      "available": true,
+      "missing": [],
+      "warnings": [
+        {
+          "code": "W_RETYPED_COLUMN",
+          "plain": "The column pickslip_detail.qty_req is float8 in AMOS but VARCHAR2 in the DWH. Its values may look different."
+        },
+        {
+          "code": "W_RETYPED_COLUMN",
+          "plain": "The column pickslip_detail.qty_booked is float8 in AMOS but VARCHAR2 in the DWH. Its values may look different."
+        }
+      ],
+      "placeholders": [
+        {
+          "name": "WP_NAME",
+          "maxLength": 100
+        }
+      ],
+      "outputs": [
+        {
+          "name": "EVENT_PERFNO_I",
+          "type": "int"
+        },
+        {
+          "name": "PART_REQUESTNO_I",
+          "type": "int"
+        },
+        {
+          "name": "PICKSLIPNO",
+          "type": "text"
+        },
+        {
+          "name": "RECNO",
+          "type": "int"
+        },
+        {
+          "name": "PARTNO",
+          "type": "text"
+        },
+        {
+          "name": "SERIALNO",
+          "type": "text"
+        },
+        {
+          "name": "QTY_REQ",
+          "type": "float"
+        },
+        {
+          "name": "QTY_BOOKED",
+          "type": "float"
+        },
+        {
+          "name": "DATE_BOOKED",
+          "type": "int"
+        },
+        {
+          "name": "STATUS",
+          "type": "int"
+        }
+      ],
+      "orderKeys": [],
+      "usedColumns": [
+        "pickslip_detail.date_booked",
+        "pickslip_detail.event_perfno_i",
+        "pickslip_detail.part_requestno_i",
+        "pickslip_detail.partno",
+        "pickslip_detail.pickslipno",
+        "pickslip_detail.qty_booked",
+        "pickslip_detail.qty_req",
+        "pickslip_detail.recno",
+        "pickslip_detail.serialno",
+        "pickslip_detail.status",
+        "wo_header.event_perfno_i",
+        "wp_assignment.event_perfno_i",
+        "wp_assignment.wpno_i",
+        "wp_header.wpno",
+        "wp_header.wpno_i"
+      ],
+      "execLength": 603
+    },
+    {
+      "source": "extract_wp_trace_pickslip_details.sql",
+      "sourceSha256": "45b6a4412f373542396d1edef4b953ece29e988a8abbd17fbae55936ea58f76f",
+      "status": "converted",
+      "output": "queries/dwh/extract_wp_trace_pickslip_details.sql",
+      "available": true,
+      "missing": [],
+      "warnings": [
+        {
+          "code": "W_RETYPED_COLUMN",
+          "plain": "The column pickslip_detail.qty_req is float8 in AMOS but VARCHAR2 in the DWH. Its values may look different."
+        },
+        {
+          "code": "W_RETYPED_COLUMN",
+          "plain": "The column pickslip_detail.qty_sys is float8 in AMOS but VARCHAR2 in the DWH. Its values may look different."
+        },
+        {
+          "code": "W_RETYPED_COLUMN",
+          "plain": "The column pickslip_detail.qty_booked is float8 in AMOS but VARCHAR2 in the DWH. Its values may look different."
+        }
+      ],
+      "placeholders": [
+        {
+          "name": "WP_NAME",
+          "maxLength": 100
+        }
+      ],
+      "outputs": [
+        {
+          "name": "PART_REQUESTNO_I",
+          "type": "int"
+        },
+        {
+          "name": "PICKSLIPNO",
+          "type": "text"
+        },
+        {
+          "name": "RECNO",
+          "type": "int"
+        },
+        {
+          "name": "PARTNO",
+          "type": "text"
+        },
+        {
+          "name": "SERIALNO",
+          "type": "text"
+        },
+        {
+          "name": "QTY_REQ",
+          "type": "float"
+        },
+        {
+          "name": "QTY_SYS",
+          "type": "float"
+        },
+        {
+          "name": "QTY_BOOKED",
+          "type": "float"
+        },
+        {
+          "name": "DATE_BOOKED",
+          "type": "int"
+        },
+        {
+          "name": "REPAIR_ORDER",
+          "type": "text"
+        },
+        {
+          "name": "EVENT_PERFNO_I",
+          "type": "int"
+        },
+        {
+          "name": "STATUS",
+          "type": "int"
+        }
+      ],
+      "orderKeys": [],
+      "usedColumns": [
+        "part_request_2.event_key",
+        "part_request_2.event_type",
+        "part_request_2.part_requestno_i",
+        "pickslip_detail.date_booked",
+        "pickslip_detail.event_perfno_i",
+        "pickslip_detail.part_requestno_i",
+        "pickslip_detail.partno",
+        "pickslip_detail.pickslipno",
+        "pickslip_detail.qty_booked",
+        "pickslip_detail.qty_req",
+        "pickslip_detail.qty_sys",
+        "pickslip_detail.recno",
+        "pickslip_detail.repair_order",
+        "pickslip_detail.serialno",
+        "pickslip_detail.status",
+        "wo_header.event_perfno_i",
+        "workstep_link.event_perfno_i",
+        "workstep_link.workstep_linkno_i",
+        "wp_assignment.event_perfno_i",
+        "wp_assignment.wpno_i",
+        "wp_header.wpno",
+        "wp_header.wpno_i"
+      ],
+      "execLength": 918
+    },
+    {
+      "source": "extract_wp_trace_pickslip_headers.sql",
+      "sourceSha256": "6d5714bd964388b69c2d366f2d169063391d19a63e5e418c3144f6b475c396bd",
+      "status": "converted",
+      "output": "queries/dwh/extract_wp_trace_pickslip_headers.sql",
+      "available": true,
+      "missing": [],
+      "warnings": [],
+      "placeholders": [
+        {
+          "name": "WP_NAME",
+          "maxLength": 100
+        }
+      ],
+      "outputs": [
+        {
+          "name": "PICKSLIPNO",
+          "type": "text"
+        },
+        {
+          "name": "PICKSLIP_DATE",
+          "type": "int"
+        },
+        {
+          "name": "ISSUE_DATE",
+          "type": "int"
+        },
+        {
+          "name": "ISSUE_TIME",
+          "type": "int"
+        },
+        {
+          "name": "PLANNED_DATE",
+          "type": "int"
+        },
+        {
+          "name": "STATE",
+          "type": "text"
+        },
+        {
+          "name": "STATION_FROM",
+          "type": "text"
+        },
+        {
+          "name": "STORE_FROM",
+          "type": "text"
+        },
+        {
+          "name": "STATION_TO",
+          "type": "text"
+        },
+        {
+          "name": "STORE_TO",
+          "type": "text"
+        },
+        {
+          "name": "RECEIVER",
+          "type": "text"
+        },
+        {
+          "name": "IS_TRANSFER",
+          "type": "text"
+        },
+        {
+          "name": "IS_RESERVATION",
+          "type": "text"
+        },
+        {
+          "name": "STATUS",
+          "type": "int"
+        }
+      ],
+      "orderKeys": [],
+      "usedColumns": [
+        "part_request_2.event_key",
+        "part_request_2.event_type",
+        "part_request_2.part_requestno_i",
+        "pickslip_detail.part_requestno_i",
+        "pickslip_detail.pickslipno",
+        "pickslip_header.is_reservation",
+        "pickslip_header.is_transfer",
+        "pickslip_header.issue_date",
+        "pickslip_header.issue_time",
+        "pickslip_header.pickslip_date",
+        "pickslip_header.pickslipno",
+        "pickslip_header.planned_date",
+        "pickslip_header.receiver",
+        "pickslip_header.state",
+        "pickslip_header.station_from",
+        "pickslip_header.station_to",
+        "pickslip_header.status",
+        "pickslip_header.store_from",
+        "pickslip_header.store_to",
+        "wo_header.event_perfno_i",
+        "workstep_link.event_perfno_i",
+        "workstep_link.workstep_linkno_i",
+        "wp_assignment.event_perfno_i",
+        "wp_assignment.wpno_i",
+        "wp_header.wpno",
+        "wp_header.wpno_i"
+      ],
+      "execLength": 1085
+    },
+    {
+      "source": "extract_wp_trace_wo_part_on_off.sql",
+      "sourceSha256": "e43558b90f7eba6da9fd02ea4111349fc6295205946d20272f8e2e04d10412be",
+      "status": "converted",
+      "output": "queries/dwh/extract_wp_trace_wo_part_on_off.sql",
+      "available": true,
+      "missing": [],
+      "warnings": [
+        {
+          "code": "W_RETYPED_COLUMN",
+          "plain": "The column wo_part_on_off.qty_off is float8 in AMOS but VARCHAR2 in the DWH. Its values may look different."
+        }
+      ],
+      "placeholders": [
+        {
+          "name": "WP_NAME",
+          "maxLength": 100
+        }
+      ],
+      "outputs": [
+        {
+          "name": "WORKSTEP_LINKNO_I",
+          "type": "int"
+        },
+        {
+          "name": "ACTIONNO_I",
+          "type": "int"
+        },
+        {
+          "name": "EVENT_PERFNO_I",
+          "type": "int"
+        },
+        {
+          "name": "PART_EXCHANGENO_I",
+          "type": "int"
+        },
+        {
+          "name": "PARTNO",
+          "type": "text"
+        },
+        {
+          "name": "SERIALNO",
+          "type": "text"
+        },
+        {
+          "name": "LABELNO",
+          "type": "int"
+        },
+        {
+          "name": "PARTNO_OFF",
+          "type": "text"
+        },
+        {
+          "name": "SERIALNO_OFF",
+          "type": "text"
+        },
+        {
+          "name": "BATCHNO_OFF",
+          "type": "text"
+        },
+        {
+          "name": "QTY_OFF",
+          "type": "float"
+        },
+        {
+          "name": "AC_POSITION",
+          "type": "text"
+        },
+        {
+          "name": "REMOVAL_TYPE",
+          "type": "text"
+        },
+        {
+          "name": "CERTIFICATE_I",
+          "type": "int"
+        },
+        {
+          "name": "STATUS",
+          "type": "int"
+        }
+      ],
+      "orderKeys": [],
+      "usedColumns": [
+        "wo_header.event_perfno_i",
+        "wo_part_on_off.ac_position",
+        "wo_part_on_off.actionno_i",
+        "wo_part_on_off.batchno_off",
+        "wo_part_on_off.certificate_i",
+        "wo_part_on_off.event_perfno_i",
+        "wo_part_on_off.labelno",
+        "wo_part_on_off.part_exchangeno_i",
+        "wo_part_on_off.partno",
+        "wo_part_on_off.partno_off",
+        "wo_part_on_off.qty_off",
+        "wo_part_on_off.removal_type",
+        "wo_part_on_off.serialno",
+        "wo_part_on_off.serialno_off",
+        "wo_part_on_off.status",
+        "wo_text_action.actionno_i",
+        "wo_text_action.workstep_linkno_i",
+        "workstep_link.event_perfno_i",
+        "workstep_link.workstep_linkno_i",
+        "wp_assignment.event_perfno_i",
+        "wp_assignment.wpno_i",
+        "wp_header.wpno",
+        "wp_header.wpno_i"
+      ],
+      "execLength": 931
     },
     {
       "source": "list_all_seq_in_a_single_wp_3_levels_w_sts.sql",

@@ -3,11 +3,18 @@
 
 Catalogue snapshot taken at 2026-11-18T09:24:48Z (UTC). Compares the AMOS tables and columns used by the repo queries and `schema/*.yaml` with the DWH copy.
 
-Errors: 17 · Warnings: 8 · Notes: 6
+Errors: 32 · Warnings: 8 · Notes: 6
 
 | Severity | Kind | Table | Column | AMOS | DWH | What it means |
 |---|---|---|---|---|---|---|
+| error | retyped | ALLOCATION_LINK | QTY | float8 | VARCHAR2(20) | AMOS stores a number (float8); the DWH stores VARCHAR2. Queries that compute with it are refused. |
 | error | missing_table | CML_REFERENCE |  |  |  | The DWH has no table CML_REFERENCE. Queries that use it cannot run there. |
+| error | retyped | CONSUMABLES | QTY | float8 | VARCHAR2(20) | AMOS stores a number (float8); the DWH stores VARCHAR2. Queries that compute with it are refused. |
+| error | retyped | HISTORY | QTY | float8 | VARCHAR2(50) | AMOS stores a number (float8); the DWH stores VARCHAR2. Queries that compute with it are refused. |
+| error | retyped | OD_DETAIL | EXT_QTY | float8 | VARCHAR2(30) | AMOS stores a number (float8); the DWH stores VARCHAR2. Queries that compute with it are refused. |
+| error | retyped | OD_DETAIL | QTY | float8 | VARCHAR2(30) | AMOS stores a number (float8); the DWH stores VARCHAR2. Queries that compute with it are refused. |
+| error | retyped | OD_DETAIL | REQ_QTY | float8 | VARCHAR2(30) | AMOS stores a number (float8); the DWH stores VARCHAR2. Queries that compute with it are refused. |
+| error | retyped | OD_REC_DETAIL | QTY | float8 | VARCHAR2(30) | AMOS stores a number (float8); the DWH stores VARCHAR2. Queries that compute with it are refused. |
 | error | missing_table | OEM_DOC_PARTNO |  |  |  | The DWH has no table OEM_DOC_PARTNO. Queries that use it cannot run there. |
 | error | retyped | PART | ALERT_QTY | float8 | VARCHAR2(50) | AMOS stores a number (float8); the DWH stores VARCHAR2. Queries that compute with it are refused. |
 | error | missing_column | PART | MANUAL_TARGET_STOCK |  |  | The DWH table PART has no column MANUAL_TARGET_STOCK. |
@@ -17,10 +24,18 @@ Errors: 17 · Warnings: 8 · Notes: 6
 | error | retyped | PART | SAFETY_STOCK | float8 | VARCHAR2(50) | AMOS stores a number (float8); the DWH stores VARCHAR2. Queries that compute with it are refused. |
 | error | missing_column | PART | TARGET_STOCK |  |  | The DWH table PART has no column TARGET_STOCK. |
 | error | retyped | PART | WEIGHT | float8 | VARCHAR2(50) | AMOS stores a number (float8); the DWH stores VARCHAR2. Queries that compute with it are refused. |
+| error | retyped | PART_REQUEST_2 | CONFIRMED_QTY | float8 | VARCHAR2(20) | AMOS stores a number (float8); the DWH stores VARCHAR2. Queries that compute with it are refused. |
 | error | retyped | PART_REQUEST_2 | QTY | float8 | VARCHAR2(20) | AMOS stores a number (float8); the DWH stores VARCHAR2. Queries that compute with it are refused. |
+| error | retyped | PICKSLIP_BOOKED | QTY_BOOKED | float8 | VARCHAR2(20) | AMOS stores a number (float8); the DWH stores VARCHAR2. Queries that compute with it are refused. |
+| error | retyped | PICKSLIP_BOOKED | QTY_CANCELED | float8 | VARCHAR2(20) | AMOS stores a number (float8); the DWH stores VARCHAR2. Queries that compute with it are refused. |
+| error | retyped | PICKSLIP_BOOKED | QTY_SYS | float8 | VARCHAR2(20) | AMOS stores a number (float8); the DWH stores VARCHAR2. Queries that compute with it are refused. |
+| error | retyped | PICKSLIP_DETAIL | QTY_BOOKED | float8 | VARCHAR2(20) | AMOS stores a number (float8); the DWH stores VARCHAR2. Queries that compute with it are refused. |
+| error | retyped | PICKSLIP_DETAIL | QTY_REQ | float8 | VARCHAR2(20) | AMOS stores a number (float8); the DWH stores VARCHAR2. Queries that compute with it are refused. |
+| error | retyped | PICKSLIP_DETAIL | QTY_SYS | float8 | VARCHAR2(20) | AMOS stores a number (float8); the DWH stores VARCHAR2. Queries that compute with it are refused. |
 | error | missing_table | TASKCARD_COVERSHEET_INFO |  |  |  | The DWH has no table TASKCARD_COVERSHEET_INFO. Queries that use it cannot run there. |
 | error | missing_table | TIME_CAPTURED_HISTORY |  |  |  | The DWH has no table TIME_CAPTURED_HISTORY. Queries that use it cannot run there. |
 | error | missing_table | WORK_TEMPLATE |  |  |  | The DWH has no table WORK_TEMPLATE. Queries that use it cannot run there. |
+| error | retyped | WO_PART_ON_OFF | QTY_OFF | float8 | VARCHAR2(17) | AMOS stores a number (float8); the DWH stores VARCHAR2. Queries that compute with it are refused. |
 | error | missing_table | WP_DEPARTMENT_LINK |  |  |  | The DWH has no table WP_DEPARTMENT_LINK. Queries that use it cannot run there. |
 | error | missing_table | WP_HISTORY |  |  |  | The DWH has no table WP_HISTORY. Queries that use it cannot run there. |
 | error | missing_table | WP_STATUS |  |  |  | The DWH has no table WP_STATUS. Queries that use it cannot run there. |
