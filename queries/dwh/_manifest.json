@@ -1190,6 +1190,195 @@
       "execLength": 1085
     },
     {
+      "source": "extract_wp_seqs_by_wp_parts.sql",
+      "sourceSha256": "b752c2f2d496c1f101826edbf50eb132f8c699124592ce0a9ba55d15f3e5b8e5",
+      "status": "converted",
+      "output": "queries/dwh/extract_wp_seqs_by_wp_parts.sql",
+      "available": true,
+      "missing": [],
+      "warnings": [
+        {
+          "code": "W_RETYPED_COLUMN",
+          "plain": "The column part_request_2.qty is float8 in AMOS but VARCHAR2 in the DWH. Its values may look different."
+        }
+      ],
+      "placeholders": [
+        {
+          "name": "WP_NAME",
+          "maxLength": 100
+        }
+      ],
+      "outputs": [
+        {
+          "name": "z_WORKSTEP_LINK_ID",
+          "type": "int"
+        },
+        {
+          "name": "z_PART_NO",
+          "type": "text"
+        },
+        {
+          "name": "z_PART_QTY",
+          "type": "float"
+        },
+        {
+          "name": "z_PART_NO_PCF",
+          "type": "text"
+        }
+      ],
+      "orderKeys": [],
+      "usedColumns": [
+        "part_request_2.event_key",
+        "part_request_2.event_type",
+        "part_request_2.no_pcf",
+        "part_request_2.partno",
+        "part_request_2.qty",
+        "wo_header.event_perfno_i",
+        "workstep_link.event_perfno_i",
+        "workstep_link.workstep_linkno_i",
+        "wp_assignment.event_perfno_i",
+        "wp_assignment.wpno_i",
+        "wp_header.wpno",
+        "wp_header.wpno_i"
+      ],
+      "execLength": 648
+    },
+    {
+      "source": "extract_wp_seqs_by_wp_steps.sql",
+      "sourceSha256": "f6400fd06dc3ff853a8e43d88c9383ef260d1f06d718b4854f718e8234aad350",
+      "status": "converted",
+      "output": "queries/dwh/extract_wp_seqs_by_wp_steps.sql",
+      "available": true,
+      "missing": [],
+      "warnings": [
+        {
+          "code": "W_STRING_ORDER",
+          "plain": "Text sorts, and text comparisons with <, >, BETWEEN, may differ slightly from AMOS (the DWH orders text by character code)."
+        }
+      ],
+      "placeholders": [
+        {
+          "name": "WP_NAME",
+          "maxLength": 100
+        }
+      ],
+      "outputs": [
+        {
+          "name": "z_WP_ID",
+          "type": "int"
+        },
+        {
+          "name": "z_WP_NO",
+          "type": "text"
+        },
+        {
+          "name": "z_WP_DESC",
+          "type": "text"
+        },
+        {
+          "name": "z_WP_STATION",
+          "type": "text"
+        },
+        {
+          "name": "z_AC_REG",
+          "type": "text"
+        },
+        {
+          "name": "z_WP_START_DATE",
+          "type": "int"
+        },
+        {
+          "name": "z_WP_START_TIME",
+          "type": "int"
+        },
+        {
+          "name": "z_WP_ACT_END_DATE",
+          "type": "int"
+        },
+        {
+          "name": "z_WP_ACT_END_TIME",
+          "type": "int"
+        },
+        {
+          "name": "z_WP_SEQ_1ST",
+          "type": "int"
+        },
+        {
+          "name": "z_WP_SEQ_2ND",
+          "type": "int"
+        },
+        {
+          "name": "z_WORKSTEP_NO",
+          "type": "int"
+        },
+        {
+          "name": "z_WP_IT_STS",
+          "type": "text"
+        },
+        {
+          "name": "z_WP_IT_NAME",
+          "type": "text"
+        },
+        {
+          "name": "z_WP_IT_NAME_1",
+          "type": "text"
+        },
+        {
+          "name": "z_WP_IT_HEADER",
+          "type": "text"
+        },
+        {
+          "name": "z_WP_IT_TEXT",
+          "type": "text"
+        },
+        {
+          "name": "z_WP_IT_TEXT_HTML",
+          "type": "text"
+        },
+        {
+          "name": "z_WORKSTEP_LINK_ID",
+          "type": "int"
+        }
+      ],
+      "orderKeys": [
+        "z_WP_NO",
+        "z_WP_SEQ_1ST",
+        "z_WP_SEQ_2ND",
+        "z_WORKSTEP_NO"
+      ],
+      "usedColumns": [
+        "wo_event_link.event_display",
+        "wo_event_link.event_name",
+        "wo_event_link.event_perfno_i",
+        "wo_header.event_perfno_i",
+        "wo_header.state",
+        "wo_text_description.descno_i",
+        "wo_text_description.header",
+        "wo_text_description.text",
+        "wo_text_description.text_html",
+        "workstep_link.descno_i",
+        "workstep_link.event_perfno_i",
+        "workstep_link.sequenceno",
+        "workstep_link.workstep_linkno_i",
+        "wp_assignment.event_perfno_i",
+        "wp_assignment.wpno_i",
+        "wp_header.ac_registr",
+        "wp_header.act_end_date",
+        "wp_header.act_end_time",
+        "wp_header.description",
+        "wp_header.start_date",
+        "wp_header.start_time",
+        "wp_header.station",
+        "wp_header.wpno",
+        "wp_header.wpno_i",
+        "wp_sequence.event_perfno_i",
+        "wp_sequence.seqno",
+        "wp_sequence.seqno_prefix_i",
+        "wp_sequence.wpno_i"
+      ],
+      "execLength": 1614
+    },
+    {
       "source": "extract_wp_seqs_parameterized.sql",
       "sourceSha256": "2284673911cb69cacb11228dc5aadb1f0585177ab4de7b46c6080541e9915de9",
       "status": "converted",
