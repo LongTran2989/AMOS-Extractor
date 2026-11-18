@@ -99,6 +99,7 @@ dwh_facts:
     extract_all_parts_run: "refused by Oracle: ORA-00904 PART.MANUAL_TARGET_STOCK (also missing: PART.TARGET_STOCK)"
     expression_probes: "24 of 24 PASS"
     queries_available_as_written: 0
+    after_status_workaround: "extract_wp_item_counts.sql available; compiles; 2281 rows in 1.5 s to CSV (2026-11-18)"
   part_numbers_stored_as_text:                 # float8 in AMOS, VARCHAR2 in the DWH (schema diff: retyped)
     - part.alert_qty
     - part.max_purch

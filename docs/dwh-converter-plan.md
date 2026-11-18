@@ -824,7 +824,8 @@ All live steps were read-only `SELECT`s, each approved by you, run through the n
 | 2.1 step 5: `dwh:run -- extract_all_parts.sql` | Refused by Oracle: `ORA-00904: "PART"."MANUAL_TARGET_STOCK": invalid identifier`, shown as the plain message "The DWH has no column called PART.MANUAL_TARGET_STOCK…" | The plain-error path works live (the ORA text arrives as an informational relay message, a review fix). The query itself cannot run in the DWH as written. |
 | 2.2 step 4: `dwh:catalogue` | 1,999 columns in 59 tables (same as Phase 0b, b8), committed as `dwh/catalogue.json` | Availability is now exact (tables and columns). |
 | 2.2 step 4: `dwh:schema-diff` / `dwh:convert` | 17 errors, 8 warnings, 6 notes (`docs/generated/dwh-schema-diff.md`) | See below. **No repo query is available in the DWH as written**: 23 convert, all need a missing table or column; 4 are refused (2 duplicate names in openquery mode, 2 lint errors). |
-| 2.2 step 4: `dwh:compile-all` | Not run: no query is available, so there is nothing to compile | Run it once a query is available (after a workaround). |
+| 2.2 step 4: `dwh:compile-all` | First run found nothing available. After the status workaround (below, 2026-11-18): **1 of 1 available queries compile** | |
+| Exit check, 2026-11-18: `dwh:run -- extract_wp_item_counts.sql --csv …` | **2,281 rows in 1.5 s**; UTF-8 with BOM, CRLF, every field quoted, whole numbers, no INCOMPLETE line | **Phase 2 exit criterion met live**: an available converted query runs from the command line into a CSV that opens correctly in Excel. |
 | 2.4 step 5: `dwh:probe-exprs` | **24 of 24 PASS** (month clamping, minutes on a date, hour chains, `::date`, day differences, integer division and modulo with negatives, `EXTRACT`, NULL ordering) | The converter's date and number rules give AMOS's answers on the real Oracle engine. You may still run `npm run dwh:probe-exprs -- --pg` in AMOS once. |
 | Review follow-up: 7,889-character `N'…'` text through `OPENQUERY` | SQL Server error 103: "… is too long. Maximum length is 8000." | The limit is 8000 **bytes**, i.e. **4000 characters** for the `N'…'` text. `OPENQUERY_MAX_LENGTH` is now 4000 (A.4 step 12, #83); the longest current query is about 3,860 characters as sent, so nothing is refused today. |
 
@@ -834,7 +835,9 @@ All live steps were read-only `SELECT`s, each approved by you, run through the n
 - `WORK_TEMPLATE` and `WP_HISTORY` (described in `schema/`, not used by repo queries) are also missing.
 - `WP_HEADER.WPNO` is `VARCHAR2(50)` in the DWH; AMOS allows 70 characters (`truncation_risk`). Long text columns are `VARCHAR2(1000–4000)` (`truncation_risk`, as known from b8).
 
+**First workaround (2026-11-18): filter by status number.** The DWH has no `WP_STATUS` table, so `wp_header.wp_status` (now an approved name, `z_WP_STATUS_ID`) is compared with the ids read from AMOS: In Progress = 11, 115; Issued = 112, 114 (full list in `schema/workpack.yaml` notes; several ids share a name). New query `extract_wp_item_counts.sql`: items (work orders in `wp_assignment`) per In Progress or Issued workpack. Result: 835 In Progress workpacks with 10,487 items, 1,446 Issued with 5,970 items (16,457 items in 2,281 workpacks; 105 have none). It has no date window, so long-open workpacks (e.g. from early 2025) are included. The status only reflects today, as CLAUDE.md says.
+
 **Open, for you to decide:**
-1. Workarounds per query for the missing tables and columns (Part C, item 1), now with the exact list from the diff.
+1. Workarounds for the other queries (Part C, item 1): the same status-number filter can replace `WP_STATUS` in most of them; `WP_DEPARTMENT_LINK` (department filter) and the two `PART` columns still need a decision.
 2. `scripts/dwh.ts` and `scripts/example_steps.sql` were not deleted (untracked; your call).
 3. The deferred review minors are listed in the session summary and in the executor's ledger.
