@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Status:** Revision 2.1 (2026-11-17). Phases 0, 0b, 1 and 2 done (Phase 2 results in "Phase 2 findings" at the end). **The b6 re-test passed (2026-11-17, warm 1.4–1.6 s; see "Phase 0b findings")**. **The six missing DWH tables cannot be added (decision 2026-11-17)**: workarounds or dropping some information are decided later, per query; with the real catalogue **no repo query runs in the DWH as written today**. Phases 3–4 not started.
+**Status:** Revision 2.1 (2026-11-17). Phases 0, 0b, 1 and 2 done (Phase 2 results in "Phase 2 findings" at the end). **The b6 re-test passed (2026-11-17, warm 1.4–1.6 s; see "Phase 0b findings")**. **The six missing DWH tables cannot be added (decision 2026-11-17)**: workarounds or dropping some information are decided later, per query; with the real catalogue **no repo query runs in the DWH as written today**. **Phase 3 (2026-11-18): the tools are done (`dwh:verify-pack`, `dwh:compare`, `dwh:run --at`); the live check of `extract_wp_item_counts.sql` is FAIL with two open differences, so the Phase 3 exit is not met yet (see "Phase 3 findings").** Phase 4 not started.
 
 **Revision history**
 - *Rev 1 (2026-11-17):* PostgreSQL → T-SQL converter, run as four-part linked-server queries on SQL Server.
@@ -630,9 +630,9 @@ Read-only. I run the DWH ones through `scripts/dwh.ts` after you approve each (e
 **Interfaces:**
 - Produces: `pinPg(source: string, at: string, params: Record<string, string>): string` (offset splicing); `writeVerifyPack(root: string, source: string, at: string, params: Record<string, string>): { amosSql: string; dwhSql: string }`
 
-- [ ] **Step 1: Write failing tests**: `pinPg changes only the CURRENT_* tokens`; `pinPg escapes a quote in a parameter`; `pinned Oracle uses the same instant`; `unavailable query is refused`.
-- [ ] **Step 2–4:** Run (FAIL), implement, run (PASS).
-- [ ] **Step 5: Commit** `feat(dwh): frozen-clock verification packs`.
+- [x] **Step 1: Write failing tests**: `pinPg changes only the CURRENT_* tokens`; `pinPg escapes a quote in a parameter`; `pinned Oracle uses the same instant`; `unavailable query is refused`.
+- [x] **Step 2–4:** Run (FAIL), implement, run (PASS).
+- [x] **Step 5: Commit** `feat(dwh): frozen-clock verification packs`.
 
 ### Task 3.2: Compare and report
 
@@ -645,10 +645,10 @@ Read-only. I run the DWH ones through `scripts/dwh.ts` after you approve each (e
 - Consumes: `parseCsv`, `normalizeCell`
 - Produces: `interface CompareReport { headerMatch: boolean; counts: { amos: number; dwh: number }; onlyAmos: number; onlyDwh: number; differingColumns: string[]; cellDiffs: { key: string; column: string; amos: string; dwh: string; kind: DiffKind }[]; orderSame: boolean; driftKeys: string[]; pass: boolean }`; `compareResults(amos: Table, dwh: Table, keys: string[], orderKeys: string[]): CompareReport`; `renderReport(r: CompareReport): string`; `DiffKind = "whitespace" | "case" | "null_vs_empty" | "number_format" | "truncated" | "tz_shift_7h" | "changed"`
 
-- [ ] **Step 1: Write failing tests**: one per `DiffKind`; `lower-case AMOS header matches z_ header`; `apostrophe thousands separators equal`; `ties don't count as order differences`; `float shortest round-trip equal`; `truncated long text detected`; `null_vs_empty does not fail the pass criterion`; `pass is false on any changed cell`.
-- [ ] **Step 2–4:** Run (FAIL), implement, run (PASS).
-- [ ] **Step 5: Live verification** of every available query with the user's AMOS exports. Expected: PASS, or every difference explained.
-- [ ] **Step 6: Commit** `feat(dwh): AMOS vs DWH result comparison`.
+- [x] **Step 1: Write failing tests**: one per `DiffKind`; `lower-case AMOS header matches z_ header`; `apostrophe thousands separators equal`; `ties don't count as order differences`; `float shortest round-trip equal`; `truncated long text detected`; `null_vs_empty does not fail the pass criterion`; `pass is false on any changed cell`.
+- [x] **Step 2–4:** Run (FAIL), implement, run (PASS).
+- [ ] **Step 5: Live verification** of every available query with the user's AMOS exports. Expected: PASS, or every difference explained. *(2026-11-18: run; FAIL with two differences not yet explained, see "Phase 3 findings".)*
+- [x] **Step 6: Commit** `feat(dwh): AMOS vs DWH result comparison`.
 
 **Phase 3 test plan:** unit tests above; live verification of every available query. Exit: a PASS report per available query.
 
@@ -841,3 +841,23 @@ All live steps were read-only `SELECT`s, each approved by you, run through the n
 1. Workarounds for the other queries (Part C, item 1): the same status-number filter can replace `WP_STATUS` in most of them; `WP_DEPARTMENT_LINK` (department filter) and the two `PART` columns still need a decision.
 2. `scripts/dwh.ts` and `scripts/example_steps.sql` were not deleted (untracked; your call).
 3. The deferred review minors are listed in the session summary and in the executor's ledger.
+
+## Phase 3 findings (2026-11-18)
+
+New commands (offline unless noted): `npm run dwh:verify-pack -- <source.sql> [--at …] [--param K=V]` writes `verify/<name>/{amos.sql, dwh.sql, pack.json}` with "now" frozen to one UTC instant (default: the last whole hour); `npm run dwh:run -- <source.sql> --at <instant>` runs the same frozen query in the DWH (live, read-only); `npm run dwh:compare -- <amos.xlsx|amos.csv> <dwh.csv> [--key …] [--amos-rows N] [--within rows.csv]` writes `report.md` next to the DWH CSV. The xlsx reader uses built-in Node only. Fixed keys are in `dwh/verify-keys.yaml`.
+
+**The AMOS the user can query is a test copy, taken around 2026-10-01, older than the DWH.** The DWH cannot be rewound to that day: `wp_header.wp_status` is today's status, and `MUTATION` is only the last-change day. So the check compares the rows that should not have changed: the DWH workpacks whose header and items all have `MUTATION` before 2026-10-01 (read-only query `verify/extract_wp_item_counts/unchanged-since-2026-10-01.oracle.sql`, 1,975 rows), passed to the compare as `--within`. Two of the three fixed keys the user picked (COMP-251026 BASE-MCC-TSV321-01, A327-031126 LINE-MCC-TSV) were created after the test copy; they were replaced by a rule fixed before comparing (per station, the lowest `z_WP_ID` that is in the AMOS export and unchanged since before 1 Oct): A397-070824CIHALCS (HAN), A354-260425 (SGN); A616-200326 (DAD) kept.
+
+| Check (`extract_wp_item_counts.sql`) | Result |
+|---|---|
+| AMOS export (test copy) | 416 rows; AMOS showed 416 on screen, so the export is not cut short. Read from xlsx: lower-case headers matched, no formatting differences. |
+| DWH (`dwh:run … --at 2026-11-18T03:00:00Z`) | 2,350 rows (2,281 on 2026-11-17). |
+| All rows | FAIL as expected for two different days: 290 rows only in AMOS, 2,224 only in the DWH, 66 cells differ. Shown as possible drift. |
+| Fixed keys (3) | **FAIL**: A397-070824CIHALCS equal; A354-260425 has 23 items in AMOS, 40 in the DWH; A616-200326 has 0 vs 1. |
+| Unchanged since before 1 Oct (1,975) | **FAIL**: 99 are in the AMOS export; **56 equal, 43 differ, only in the item count, and the DWH always has more**. 1,876 are not in the AMOS export. |
+
+**Open difference 1: the DWH counts more items in 43 unchanged workpacks.** A read-only look at their items (`extra-items.oracle.sql`): 447 items, all `WP_ASSIGNMENT.STATUS` 0, all created between April 2025 and 15 Sep 2026, none created or changed on or after 1 Oct. So the extra items are not new work (not drift). Either the DWH still holds items that were removed in AMOS (a delete that the staging copy never received), or the test copy itself was changed after it was taken. 41 of the 43 are SGN line workpacks (A354-, A359-, A363- … L), where items are often moved. **To settle it**, someone with production AMOS opens A616-200326 LINE-MCC-TSV: the DWH shows 1 item, the test copy 0. If production also shows 0, the DWH keeps removed items, and every item count from the DWH is too high until that is fixed.
+
+**Open difference 2: 1,876 open, unchanged DWH workpacks are not in the AMOS export.** For example 16851-241025-BASE-MCC (HAN, status 11). The export is complete for what AMOS showed (416 = 416). So either the test copy does not have them, or has them with another status, or the AMOS query tool shows the user only some workpacks (for example by station or rights). The test copy cannot tell which.
+
+**Phase 3 exit is not met**: the tools work and every difference is named, but these two are not explained yet. They need either a production-AMOS check (difference 1) or a check of how the test copy and the AMOS query tool select rows (difference 2).
