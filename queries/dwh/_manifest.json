@@ -1256,7 +1256,7 @@
     },
     {
       "source": "extract_wp_seqs_by_wp_parts.sql",
-      "sourceSha256": "0c504ee95bc92a63880ebe605b59fb38c8d6c453c2a172d33efcab5acc73942b",
+      "sourceSha256": "8d1395e0b8b99a955054521d7bac4f0388fdff45218923f8483bdd0bfe3bb046",
       "status": "converted",
       "output": "queries/dwh/extract_wp_seqs_by_wp_parts.sql",
       "available": true,
@@ -1299,6 +1299,10 @@
           "type": "text"
         },
         {
+          "name": "TOOL",
+          "type": "text"
+        },
+        {
           "name": "SERIALNO",
           "type": "text"
         },
@@ -1325,6 +1329,8 @@
       ],
       "orderKeys": [],
       "usedColumns": [
+        "part.partno",
+        "part.tool",
         "part_request_2.event_key",
         "part_request_2.event_type",
         "part_request_2.no_pcf",
@@ -1350,7 +1356,7 @@
         "wp_header.wpno",
         "wp_header.wpno_i"
       ],
-      "execLength": 1184
+      "execLength": 1260
     },
     {
       "source": "extract_wp_seqs_by_wp_steps.sql",

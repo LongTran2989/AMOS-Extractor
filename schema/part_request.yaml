@@ -7,6 +7,13 @@ tables:
     primary_key: [part_requestno_i]
     joins:
       - { from: part_request_2.event_key, to: workstep_link.workstep_linkno_i, type: left, cardinality: "N:1", trust: probed, note: "Requires part_request_2.event_type = 'WSL' for Workstep level linkage" }
+      - { from: part_request_2.partno, to: part.partno, type: left, cardinality: "N:1", trust: probed, note: "Tool classification. part.partno is unique (192,627 rows = 192,627 distinct partno, probed 2026-11-18), so the join does not multiply rows. Probed on WSL part requests: 14,109,629 matched; 31,131 have no part row. part_request_2 has no tool column in the DWH (tool_flag exists in AMOS only)." }
+  part:
+    role: lookup
+    meaning: Part definition. Holds the tool flag and material class of a part number.
+    primary_key: [partno]
+    joins:
+      - { from: part.partno, to: part_request_2.partno, type: left, cardinality: "1:N", trust: probed, note: "Inverse of part_request_2.partno -> part.partno." }
 fields:
   - column: part_request_2.part_requestno_i
     name_status: approved
@@ -36,3 +43,13 @@ fields:
     name: part_no_pcf
     trust: probed
     note: "PN not included in the forecast (needs attention)"
+  - column: part.tool
+    name_status: proposed
+    proposed_name: part_tool
+    trust: probed
+    encoding: bool_yn
+    enum:
+      source: csv
+      values: { "Y": "Part is a tool", "N": "Part is not a tool" }
+    meaning: "Tool classification of the part. Reached through part_request_2.partno -> part.partno."
+    note: "Probed 2026-11-18 on the DWH: values are only Y or N (no blanks). PART: 17,799 tools of 192,627 parts (R 15,206 of 44,803; C 2,593 of 146,388; S 0 of 1,436). Among matched WSL part requests, 4,997,053 of 14,109,629 are tools (R 4,779,878 of 5,282,525 rows, i.e. 90%; C 217,175 of 8,825,785). Tools exist under both R and C, so mat_class alone cannot classify a tool. Other tool-like columns (part_forecast.tool, history.tool, pickslip_header.is_tool_ps) are copies or per-transaction flags and are not used here; pickslip_header.is_tool_ps is blank on 415,195 of 434,621 pickslips."

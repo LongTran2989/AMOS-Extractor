@@ -7,6 +7,8 @@
 ```mermaid
 erDiagram
   part_request_2 }o--|| workstep_link : "part_request_2.event_key -> workstep_link.workstep_linkno_i"
+  part_request_2 }o--|| part : "part_request_2.partno -> part.partno"
+  part ||--o{ part_request_2 : "part.partno -> part_request_2.partno"
   part_request_info ||--|| part_request_2 : "part_request_info.part_requestno_i -> part_request_2.part_requestno_i"
   pickslip_detail }o--|| part_request_2 : "pickslip_detail.part_requestno_i -> part_request_2.part_requestno_i"
   pickslip_detail }o--|| pickslip_header : "pickslip_detail.pickslipno -> pickslip_header.pickslipno"
@@ -52,6 +54,7 @@ Part requests (materials) for maintenance events (e.g. Worksteps)
 | `part_request_2.percentage` |  |  | INT (int4) | probed | The probability that the requested parts are required, ranging from 0% to 100%. |
 | `part_request_2.externally_provisioned` |  |  | ALPHANUM (varchar(1)) | probed | Flag to indicate if the provisioning of the part request is handled externally. |
 | `part_request_2.no_pcf` | part_no_pcf | z_PART_NO_PCF | BOOL (varchar(1)) | probed | "Y" if the part request must not appear in the Parts Consumption Forecast. |
+| `part.tool` | part_tool | (proposed) | BOOL (varchar(1)) | probed | Tool classification of the part. Reached through part_request_2.partno -> part.partno. Enum: Y=Part is a tool, N=Part is not a tool |
 
 ## pickslip
 
