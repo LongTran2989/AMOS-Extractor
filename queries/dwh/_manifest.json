@@ -1067,6 +1067,55 @@
       "column": 7
     },
     {
+      "source": "extract_wp_item_counts.sql",
+      "sourceSha256": "3ed9c1c511a17111a5d7b20fdb700fcc5c49322fa0eb69d9b041e402075abf62",
+      "status": "converted",
+      "output": "queries/dwh/extract_wp_item_counts.sql",
+      "available": true,
+      "missing": [],
+      "warnings": [
+        {
+          "code": "W_STRING_ORDER",
+          "plain": "Text sorts, and text comparisons with <, >, BETWEEN, may differ slightly from AMOS (the DWH orders text by character code)."
+        }
+      ],
+      "placeholders": [],
+      "outputs": [
+        {
+          "name": "z_WP_ID",
+          "type": "int"
+        },
+        {
+          "name": "z_WP_NO",
+          "type": "text"
+        },
+        {
+          "name": "z_WP_STATION",
+          "type": "text"
+        },
+        {
+          "name": "z_WP_STATUS_ID",
+          "type": "int"
+        },
+        {
+          "name": "z_WP_ITEM_COUNT",
+          "type": "int"
+        }
+      ],
+      "orderKeys": [
+        "z_WP_NO"
+      ],
+      "usedColumns": [
+        "wp_assignment.wp_assignmentno_i",
+        "wp_assignment.wpno_i",
+        "wp_header.station",
+        "wp_header.wp_status",
+        "wp_header.wpno",
+        "wp_header.wpno_i"
+      ],
+      "execLength": 474
+    },
+    {
       "source": "extract_wp_materials.sql",
       "sourceSha256": "4ff306702d36da1c938bb065021f8bc2410fb51633d8f06040af68b2d026273b",
       "status": "converted",
