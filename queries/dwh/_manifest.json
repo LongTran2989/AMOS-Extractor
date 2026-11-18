@@ -771,6 +771,89 @@
       "execLength": 1580
     },
     {
+      "source": "extract_han_wp_in_progress_or_issued.sql",
+      "sourceSha256": "e69584aa83455c9a2dff6cb575d7ce71e0adb15f5392080f97095b907f3197c5",
+      "status": "converted",
+      "output": "queries/dwh/extract_han_wp_in_progress_or_issued.sql",
+      "available": true,
+      "missing": [],
+      "warnings": [
+        {
+          "code": "W_STRING_ORDER",
+          "plain": "Text sorts, and text comparisons with <, >, BETWEEN, may differ slightly from AMOS (the DWH orders text by character code)."
+        }
+      ],
+      "placeholders": [],
+      "outputs": [
+        {
+          "name": "z_WP_ID",
+          "type": "int"
+        },
+        {
+          "name": "z_WP_NO",
+          "type": "text"
+        },
+        {
+          "name": "z_WP_DESC",
+          "type": "text"
+        },
+        {
+          "name": "z_WP_STATION",
+          "type": "text"
+        },
+        {
+          "name": "z_WP_STATUS_ID",
+          "type": "int"
+        },
+        {
+          "name": "HIDDEN",
+          "type": "text"
+        },
+        {
+          "name": "z_WP_START_DATE",
+          "type": "int"
+        },
+        {
+          "name": "END_DATE",
+          "type": "int"
+        },
+        {
+          "name": "z_AC_REG",
+          "type": "text"
+        },
+        {
+          "name": "AC_TYP",
+          "type": "text"
+        },
+        {
+          "name": "MPNO",
+          "type": "text"
+        },
+        {
+          "name": "MP_REVISION",
+          "type": "int"
+        }
+      ],
+      "orderKeys": [
+        "z_WP_NO"
+      ],
+      "usedColumns": [
+        "wp_header.ac_registr",
+        "wp_header.ac_typ",
+        "wp_header.description",
+        "wp_header.end_date",
+        "wp_header.hidden",
+        "wp_header.mp_revision",
+        "wp_header.mpno",
+        "wp_header.start_date",
+        "wp_header.station",
+        "wp_header.wp_status",
+        "wp_header.wpno",
+        "wp_header.wpno_i"
+      ],
+      "execLength": 494
+    },
+    {
       "source": "extract_parts_standalone_no_cml_no_alternate.sql",
       "sourceSha256": "55a3a8c55375b2bb61f97464a7781b373cb1f0c6d25d50c2e9e9c54fd59be227",
       "status": "converted",
@@ -1130,6 +1213,59 @@
         "wp_header.wpno_i"
       ],
       "execLength": 573
+    },
+    {
+      "source": "extract_wp_in_progress_or_closed_24h.sql",
+      "sourceSha256": "45c4ec4c78b559ef64be2e129a18bd8046d7701e73e9e7a2637d2fb4361556b8",
+      "status": "converted",
+      "output": "queries/dwh/extract_wp_in_progress_or_closed_24h.sql",
+      "available": true,
+      "missing": [],
+      "warnings": [
+        {
+          "code": "W_UTC_TODAY",
+          "plain": "\"today\" and \"now\" mean UTC, the same as in AMOS."
+        }
+      ],
+      "placeholders": [],
+      "outputs": [
+        {
+          "name": "z_WP_ID",
+          "type": "int"
+        },
+        {
+          "name": "z_WP_NO",
+          "type": "text"
+        },
+        {
+          "name": "z_WP_STATION",
+          "type": "text"
+        },
+        {
+          "name": "z_WP_STATUS_ID",
+          "type": "int"
+        },
+        {
+          "name": "MUTATION",
+          "type": "int"
+        },
+        {
+          "name": "MUTATION_TIME",
+          "type": "int"
+        }
+      ],
+      "orderKeys": [
+        "z_WP_ID"
+      ],
+      "usedColumns": [
+        "wp_header.mutation",
+        "wp_header.mutation_time",
+        "wp_header.station",
+        "wp_header.wp_status",
+        "wp_header.wpno",
+        "wp_header.wpno_i"
+      ],
+      "execLength": 565
     },
     {
       "source": "extract_wp_item_counts.sql",
@@ -4414,6 +4550,234 @@
       "code": "E_LINT",
       "plain": "The query fails `npm run validate` (5 errors). Fix it in PostgreSQL first.",
       "detail": "[R8] Undeclared JOIN: workstep_link.event_perfno_i = wp_sequence.event_perfno_i\n[R4] Column wp_header.wpno has an approved name ('wp_no') but no alias is used. Expecting 'AS z_WP_NO'.\n[R4] Column wp_sequence.seqno_prefix_i has an approved name ('wp_seq_1st') but no alias is used. Expecting 'AS z_WP_SEQ_1ST'.\n[R4] Column wp_sequence.seqno has an approved name ('wp_seq_2nd') but no alias is used. Expecting 'AS z_WP_SEQ_2ND'.\n[R4] Column workstep_link.sequenceno has an approved name ('workstep_no') but no alias is used. Expecting 'AS z_WORKSTEP_NO'."
+    },
+    {
+      "source": "probe_wp_filter_fields.sql",
+      "sourceSha256": "0d017174cbfc3ff37c1f0c1c068e7e31ba573df1e33c92cbbbcdfb2878d9009a",
+      "status": "converted",
+      "output": "queries/dwh/probe_wp_filter_fields.sql",
+      "available": true,
+      "missing": [],
+      "warnings": [
+        {
+          "code": "W_STRING_ORDER",
+          "plain": "Text sorts, and text comparisons with <, >, BETWEEN, may differ slightly from AMOS (the DWH orders text by character code)."
+        }
+      ],
+      "placeholders": [],
+      "outputs": [
+        {
+          "name": "z_WP_STATION",
+          "type": "text"
+        },
+        {
+          "name": "z_WP_STATUS_ID",
+          "type": "int"
+        },
+        {
+          "name": "WP_TYPE",
+          "type": "int"
+        },
+        {
+          "name": "HIDDEN",
+          "type": "text"
+        },
+        {
+          "name": "OWNER",
+          "type": "text"
+        },
+        {
+          "name": "HANDED_TO_PROD_GROUP",
+          "type": "text"
+        },
+        {
+          "name": "OPS_STATUS",
+          "type": "text"
+        }
+      ],
+      "orderKeys": [
+        "z_WP_STATION",
+        "z_WP_STATUS_ID",
+        "WP_TYPE",
+        "HIDDEN",
+        "OWNER",
+        "HANDED_TO_PROD_GROUP",
+        "OPS_STATUS"
+      ],
+      "usedColumns": [
+        "wp_header.handed_to_prod_group",
+        "wp_header.hidden",
+        "wp_header.ops_status",
+        "wp_header.owner",
+        "wp_header.station",
+        "wp_header.wp_status",
+        "wp_header.wp_type"
+      ],
+      "execLength": 482
+    },
+    {
+      "source": "probe_wp_filter_values.sql",
+      "sourceSha256": "a1a7244b1d9be2a1b924ef72fe7d8a89e947c4041994861e7810179fc9bfdead",
+      "status": "converted",
+      "output": "queries/dwh/probe_wp_filter_values.sql",
+      "available": true,
+      "missing": [],
+      "warnings": [
+        {
+          "code": "W_STRING_ORDER",
+          "plain": "Text sorts, and text comparisons with <, >, BETWEEN, may differ slightly from AMOS (the DWH orders text by character code)."
+        }
+      ],
+      "placeholders": [],
+      "outputs": [
+        {
+          "name": "z_WP_STATION",
+          "type": "text"
+        },
+        {
+          "name": "z_WP_STATUS_ID",
+          "type": "int"
+        },
+        {
+          "name": "WP_TYPE",
+          "type": "int"
+        },
+        {
+          "name": "HIDDEN",
+          "type": "text"
+        }
+      ],
+      "orderKeys": [
+        "z_WP_STATION",
+        "z_WP_STATUS_ID",
+        "WP_TYPE",
+        "HIDDEN"
+      ],
+      "usedColumns": [
+        "wp_header.hidden",
+        "wp_header.station",
+        "wp_header.wp_status",
+        "wp_header.wp_type"
+      ],
+      "execLength": 307
+    },
+    {
+      "source": "probe_wp_sample_rows.sql",
+      "sourceSha256": "27165e956e425e0051a2ea1160ced6a97a451d139fcf904b262caa49a2d8af0f",
+      "status": "converted",
+      "output": "queries/dwh/probe_wp_sample_rows.sql",
+      "available": true,
+      "missing": [],
+      "warnings": [],
+      "placeholders": [],
+      "outputs": [
+        {
+          "name": "z_WP_ID",
+          "type": "int"
+        },
+        {
+          "name": "z_WP_NO",
+          "type": "text"
+        },
+        {
+          "name": "z_WP_DESC",
+          "type": "text"
+        },
+        {
+          "name": "z_WP_STATION",
+          "type": "text"
+        },
+        {
+          "name": "z_WP_STATUS_ID",
+          "type": "int"
+        },
+        {
+          "name": "HIDDEN",
+          "type": "text"
+        },
+        {
+          "name": "z_WP_START_DATE",
+          "type": "int"
+        },
+        {
+          "name": "END_DATE",
+          "type": "int"
+        },
+        {
+          "name": "ACT_START_DATE",
+          "type": "int"
+        },
+        {
+          "name": "z_WP_ACT_END_DATE",
+          "type": "int"
+        },
+        {
+          "name": "EST_START_DATE",
+          "type": "int"
+        },
+        {
+          "name": "EST_END_DATE",
+          "type": "int"
+        },
+        {
+          "name": "z_AC_REG",
+          "type": "text"
+        },
+        {
+          "name": "AC_TYP",
+          "type": "text"
+        },
+        {
+          "name": "AC_MODEL",
+          "type": "text"
+        },
+        {
+          "name": "AC_SUBTYPE",
+          "type": "text"
+        },
+        {
+          "name": "AC_OPERATOR",
+          "type": "text"
+        },
+        {
+          "name": "PROJECTNO",
+          "type": "text"
+        },
+        {
+          "name": "MPNO",
+          "type": "text"
+        },
+        {
+          "name": "MP_REVISION",
+          "type": "int"
+        }
+      ],
+      "orderKeys": [
+        "z_WP_ID"
+      ],
+      "usedColumns": [
+        "wp_header.ac_model",
+        "wp_header.ac_operator",
+        "wp_header.ac_registr",
+        "wp_header.ac_subtype",
+        "wp_header.ac_typ",
+        "wp_header.act_end_date",
+        "wp_header.act_start_date",
+        "wp_header.description",
+        "wp_header.end_date",
+        "wp_header.est_end_date",
+        "wp_header.est_start_date",
+        "wp_header.hidden",
+        "wp_header.mp_revision",
+        "wp_header.mpno",
+        "wp_header.projectno",
+        "wp_header.start_date",
+        "wp_header.station",
+        "wp_header.wp_status",
+        "wp_header.wpno",
+        "wp_header.wpno_i"
+      ],
+      "execLength": 656
     },
     {
       "source": "queries/wp_seqs/BDNTH_parts.sql",
