@@ -390,8 +390,13 @@ export function renderReport(r: CompareReport): string {
 
 /** Reads an AMOS export: xlsx (by extension or ZIP signature) or CSV (UTF-8, or UTF-16 with a BOM). */
 export function readTableFile(file: string): Table {
-  const buf = readFileSync(file);
-  if (/\.xlsx$/i.test(file) || buf.subarray(0, 4).equals(Buffer.from([0x50, 0x4b, 0x03, 0x04]))) return readXlsx(buf);
+  return readTableBuffer(readFileSync(file), file);
+}
+
+/** The same, for file contents already in memory (an upload to the page). */
+export function readTableBuffer(buf: Buffer, name: string): Table {
+  if (/\.xlsx$/i.test(name) || buf.subarray(0, 4).equals(Buffer.from([0x50, 0x4b, 0x03, 0x04]))) return readXlsx(buf);
+
   if (buf[0] === 0xff && buf[1] === 0xfe) return parseCsv(buf.subarray(2).toString("utf16le"));
   if (buf[0] === 0xfe && buf[1] === 0xff) return parseCsv(Buffer.from(buf.subarray(2)).swap16().toString("utf16le"));
   return parseCsv(buf.toString("utf8"));

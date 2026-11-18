@@ -1,12 +1,15 @@
 // Task 1.7: convert every source query into queries/dwh/ (Oracle SQL, pretty rendering) plus
 // queries/dwh/_manifest.json, and check the committed files are current. No database access.
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import * as path from "node:path";
 import { loadModel } from "../schema/load.ts";
 import { loadCsvIndex } from "../schema/csv.ts";
 import { loadMapping } from "./mapping.ts";
-import { loadCatalogue } from "./catalogue.ts";
+import { loadCatalogue, type Catalogue } from "./catalogue.ts";
+import type { Model } from "../schema/types.ts";
+import type { CsvIndex } from "../schema/csv.ts";
+import type { DwhMapping } from "./mapping.ts";
 import { ConvertError } from "./convert/errors.ts";
 import { CONVERTER_VERSION, convertQuery, type ConvertResult } from "./convert/index.ts";
 import { diffSchema, renderDiffMarkdown } from "./schemaDiff.ts";
@@ -59,7 +62,64 @@ function fileText(source: string, sourceSha: string, catalogueSha: string | unde
   return `${header.join("\n")}\n\n${r.pretty}\n`;
 }
 
+/** Everything a conversion reads besides the source file itself. */
+export interface ConvertContext {
+  model: Model;
+  csv: CsvIndex;
+  mapping: DwhMapping;
+  catalogue?: Catalogue;
+}
+
+const contextCache = new Map<string, { sig: string; ctx: ConvertContext }>();
+
+/** Size and change time of every file a conversion reads (schema/, the CSV, mapping, catalogue). */
+function inputSignature(root: string, cataloguePath: string): string {
+  const files = [
+    ...readdirSync(path.join(root, "schema")).sort().map((f) => path.join(root, "schema", f)),
+    path.join(root, "Database-Description-AMOS-csv.csv"),
+    path.join(root, "dwh", "mapping.yaml"),
+    cataloguePath,
+  ];
+  return files
+    .map((f) => {
+      try {
+        const s = statSync(f);
+        return `${f}:${s.size}:${s.mtimeMs}`;
+      } catch {
+        return `${f}:-`;
+      }
+    })
+    .join("|");
+}
+
+/**
+ * The schema, CSV index, mapping and catalogue, loaded once and loaded again whenever one of
+ * those files changes on disk (the page server converts on every request).
+ */
+export function convertContext(root: string, cataloguePath = path.join(root, "dwh", "catalogue.json")): ConvertContext {
+  const key = `${root}|${cataloguePath}`;
+  const sig = inputSignature(root, cataloguePath);
+  const hit = contextCache.get(key);
+  if (hit && hit.sig === sig) return hit.ctx;
+  const catalogue = loadCatalogue(cataloguePath);
+  const ctx: ConvertContext = {
+    model: loadModel(path.join(root, "schema")),
+    csv: loadCsvIndex(path.join(root, "Database-Description-AMOS-csv.csv")),
+    mapping: loadMapping(path.join(root, "dwh", "mapping.yaml")),
+    ...(catalogue ? { catalogue } : {}),
+  };
+  contextCache.set(key, { sig, ctx });
+  return ctx;
+}
+
+/** Reads a listed source from disk (LF line ends) and converts it with a loaded context. */
+export function convertSourceWith(ctx: ConvertContext, root: string, source: string, pinNow?: string): { text: string; conv: ConvertResult } {
+  const text = lf(readFileSync(path.join(root, source), "utf8"));
+  return { text, conv: convertQuery(text, source, { ...ctx, ...(pinNow ? { pinNow } : {}) }) };
+}
+
 /** Converts one listed source the same way dwh:convert does (throws ConvertError). */
+
 export function convertSource(root: string, source: string, opts: { cataloguePath?: string; pinNow?: string } = {}): ConvertResult {
   const model = loadModel(path.join(root, "schema"));
   const csv = loadCsvIndex(path.join(root, "Database-Description-AMOS-csv.csv"));
