@@ -277,3 +277,70 @@ test("rows that should be in both files are not called drift", () => {
   assert.doesNotMatch(text, /likely drift/);
   assert.match(text, /not drift/);
 });
+
+test("review: a date-order difference is not explained by W_STRING_ORDER", () => {
+  const h = ["z_WP_ID", "z_WP_START_DATE"];
+  const amos = t(h, ["1", "2026-01-01"], ["2", "2026-02-01"]);
+  const dwh = t(h, ["2", "2026-02-01"], ["1", "2026-01-01"]);
+  const r = compareResults(amos, dwh, ["z_WP_ID"], ["z_WP_START_DATE"], { stringOrderExpected: true, textColumns: [] });
+  assert.equal(r.orderExplained, false);
+  assert.equal(r.pass, false);
+  const guessed = compareResults(amos, dwh, ["z_WP_ID"], ["z_WP_START_DATE"], { stringOrderExpected: true });
+  assert.equal(guessed.pass, false, "without types, date-looking values are not text either");
+});
+
+test("review: a text-order difference is explained only on a text column", () => {
+  const h = ["z_WP_ID", "z_WP_NO"];
+  const amos = t(h, ["1", "a-1"], ["2", "B-1"]);
+  const dwh = t(h, ["2", "B-1"], ["1", "a-1"]);
+  assert.equal(compareResults(amos, dwh, ["z_WP_ID"], ["z_WP_NO"], { stringOrderExpected: true, textColumns: ["z_WP_NO"] }).pass, true);
+});
+
+test("review: nothing compared is never a PASS", () => {
+  const empty = t(H);
+  const r = compareResults(empty, t(H), KEYS, ORDER);
+  assert.equal(r.pass, false);
+  assert.match(renderReport(r), /Nothing was compared/);
+});
+
+test("review: --within with a list that matches no row fails", () => {
+  const root = mkdtempSync(path.join(tmpdir(), "cmp-"));
+  try {
+    const dir = path.join(root, "verify", "q");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(path.join(dir, "amos.csv"), "z_wp_id,z_wp_no\r\n101,A-1\r\n");
+    writeFileSync(path.join(dir, "dwh.csv"), '"z_WP_ID","z_WP_NO"\r\n"101","A-1"\r\n');
+    writeFileSync(path.join(dir, "list.csv"), '"z_WP_ID"\r\n"999"\r\n');
+    const lines: string[] = [];
+    assert.equal(compareCli(root, [path.join(dir, "amos.csv"), path.join(dir, "dwh.csv"), "--within", path.join(dir, "list.csv")], (s) => lines.push(s)), 1, lines.join("\n"));
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("review: --amos-rows that disagrees with the file fails the overall verdict", () => {
+  const root = mkdtempSync(path.join(tmpdir(), "cmp-"));
+  try {
+    const dir = path.join(root, "verify", "q");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(path.join(dir, "amos.csv"), "z_wp_id,z_wp_no\r\n101,A-1\r\n");
+    writeFileSync(path.join(dir, "dwh.csv"), '"z_WP_ID","z_WP_NO"\r\n"101","A-1"\r\n');
+    writeFileSync(path.join(dir, "list.csv"), '"z_WP_ID"\r\n"101"\r\n');
+    const lines: string[] = [];
+    const code = compareCli(root, [path.join(dir, "amos.csv"), path.join(dir, "dwh.csv"), "--within", path.join(dir, "list.csv"), "--amos-rows", "500"], (s) => lines.push(s));
+    const out = lines.join("\n");
+    assert.equal(code, 1, out);
+    assert.match(out.split("## ")[0]!, /cut short/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("review: text keys 3.10 and 3.1 are different rows; 1'596'611 still pairs with 1596611", () => {
+  const h = ["z_SEQ", "z_TITLE"];
+  const r = compareResults(t(h, ["3.10", "x"]), t(h, ["3.1", "x"]), ["z_SEQ"], []);
+  assert.equal(r.onlyAmos, 1);
+  assert.equal(r.pass, false);
+  const ok = compareResults(t(h, ["1'596'611", "x"]), t(h, ["1596611", "x"]), ["z_SEQ"], []);
+  assert.equal(ok.pass, true);
+});

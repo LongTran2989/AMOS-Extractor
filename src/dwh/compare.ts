@@ -34,6 +34,8 @@ export interface CompareOptions {
   title?: string;
   /** The rows compared should be in both files (--within), so one-side rows are not drift. */
   notDrift?: boolean;
+  /** Output columns typed as text (from pack.json). W_STRING_ORDER explains an order difference only on these. */
+  textColumns?: string[];
 }
 
 export interface CompareReport {
@@ -58,6 +60,8 @@ export interface CompareReport {
   firstOrderDiff?: { position: number; amos: string; dwh: string };
   notes: string[];
   notDrift?: boolean;
+  /** No row was paired: nothing could be checked, so the section never passes. */
+  nothingCompared: boolean;
 }
 
 /** Differences that are export formatting only and never fail the pass criterion (A.7 #6). */
@@ -76,6 +80,11 @@ const KIND_PLAIN: Record<DiffKind, string> = {
 /** AMOS writes NULL as a single space. */
 const clean = (v: string | undefined) => (v === undefined || v === " " ? "" : v);
 const norm = (v: string | undefined) => normalizeCell(clean(v));
+/** Key values pair on the exact trimmed text; only an AMOS whole number with apostrophe thousands (1'596'611) is undone. */
+const keyNorm = (v: string | undefined) => {
+  const x = clean(v).split(/\s+/).join(" ").trim();
+  return /^-?\d{1,3}(?:'\d{3})+$/.test(x) ? x.replace(/'/g, "") : x;
+};
 const collapse = (v: string) => v.split(/\s+/).join(" ").trim();
 
 function asNumber(v: string): number | undefined {
@@ -93,6 +102,7 @@ function asInstant(v: string): number | undefined {
 }
 
 const TRUNCATION_MIN = 50;
+const DATE_OR_TIME = /^\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2}(?::\d{2})?)?$/;
 
 /** Kind of difference between two cells that differ as written (after the NULL-as-space quirk). */
 export function classify(amos: string, dwh: string): DiffKind {
@@ -139,8 +149,8 @@ export function restrictToListed(t: Table, column: string, list: Table, listName
   if (i < 0) throw new Error(`Column ${column} is not in the file.`);
   const j = columnIndex(list, column);
   if (j < 0) throw new Error(`${listName} has no column ${column} (it needs the match column to say which rows to keep).`);
-  const keep = new Set(list.rows.map((r) => norm(r[j])));
-  return { header: t.header, rows: t.rows.filter((r) => keep.has(norm(r[i]))) };
+  const keep = new Set(list.rows.map((r) => keyNorm(r[j])));
+  return { header: t.header, rows: t.rows.filter((r) => keep.has(keyNorm(r[i]))) };
 }
 
 /** Splits off the "INCOMPLETE: …" line that dwh:run writes at the end of a cut-off CSV. */
@@ -167,8 +177,8 @@ export function compareResults(amos: Table, dwh: Table, keys: string[], orderKey
     if (!c) throw new Error(`The key column ${k} is not in both files.`);
     return c;
   });
-  const keyOfAmos = (r: string[]) => keyIdx.map((c) => norm(r[c.ai])).join("\u0001");
-  const keyOfDwh = (r: string[]) => keyIdx.map((c) => norm(r[c.di])).join("\u0001");
+  const keyOfAmos = (r: string[]) => keyIdx.map((c) => keyNorm(r[c.ai])).join("\u0001");
+  const keyOfDwh = (r: string[]) => keyIdx.map((c) => keyNorm(r[c.di])).join("\u0001");
 
   // Pair rows by key; rows sharing a key pair in file order.
   const queue = new Map<string, number[]>();
@@ -205,19 +215,27 @@ export function compareResults(amos: Table, dwh: Table, keys: string[], orderKey
 
   // Row order on sort-key values only (ties are interchangeable, #39).
   let orderSame = true;
+  let isTextOrder = false;
   let firstOrderDiff: CompareReport["firstOrderDiff"];
   const ord = orderKeys.map((k) => common.find((c) => c.name.toLowerCase() === k.toLowerCase())).filter((c) => c !== undefined);
   if (ord.length) {
     const pairedAmos = new Set(pairs.map((p) => p[0]));
-    const seqA = amos.rows.flatMap((r, i) => (pairedAmos.has(i) ? [ord.map((c) => norm(r[c.ai])).join(" / ")] : []));
-    const seqD = dwh.rows.flatMap((r, i) => (pairedDwh.has(i) ? [ord.map((c) => norm(r[c.di])).join(" / ")] : []));
-    const at = seqA.findIndex((v, i) => v !== seqD[i]);
+    const valsA = amos.rows.flatMap((r, i) => (pairedAmos.has(i) ? [ord.map((c) => norm(r[c.ai]))] : []));
+    const valsD = dwh.rows.flatMap((r, i) => (pairedDwh.has(i) ? [ord.map((c) => norm(r[c.di]))] : []));
+    const at = valsA.findIndex((v, i) => v.join(" / ") !== (valsD[i] ?? []).join(" / "));
     if (at >= 0) {
       orderSame = false;
-      firstOrderDiff = { position: at + 1, amos: seqA[at]!, dwh: seqD[at]! };
+      firstOrderDiff = { position: at + 1, amos: valsA[at]!.join(" / "), dwh: (valsD[at] ?? []).join(" / ") };
+      // W_STRING_ORDER explains only a difference on a text column (by pack.json types, else by the values).
+      const k = ord.findIndex((_, j) => valsA[at]![j] !== valsD[at]?.[j]);
+      if (k >= 0) {
+        const name = ord[k]!.name.toLowerCase();
+        const textual = (v: string | undefined) => v !== undefined && v !== "" && asNumber(v) === undefined && !DATE_OR_TIME.test(v.trim());
+        isTextOrder = opts.textColumns ? opts.textColumns.some((n) => n.toLowerCase() === name) : textual(valsA[at]![k]) && textual(valsD[at]?.[k]);
+      }
     }
   }
-  const orderExplained = !orderSame && opts.stringOrderExpected === true;
+  const orderExplained = !orderSame && opts.stringOrderExpected === true && isTextOrder;
 
   const firstKey = keyIdx[0];
   const driftKeys = firstKey
@@ -250,7 +268,8 @@ export function compareResults(amos: Table, dwh: Table, keys: string[], orderKey
   }
 
   const realDiffs = cellDiffs.filter((d) => !NOISE.has(d.kind));
-  const fixedNothing = opts.expected !== undefined && nA === 0 && nD === 0;
+  const nothingCompared = pairs.length === 0;
+  if (nothingCompared) notes.unshift("Nothing was compared: no row was found in both files, so this cannot be a PASS.");
   const pass =
     headerMatch &&
     amosOnly.length === 0 &&
@@ -259,7 +278,7 @@ export function compareResults(amos: Table, dwh: Table, keys: string[], orderKey
     (orderSame || orderExplained) &&
     amosIncomplete.length === 0 &&
     opts.dwhIncomplete === undefined &&
-    !fixedNothing;
+    !nothingCompared;
 
   return {
     headerMatch,
@@ -281,6 +300,7 @@ export function compareResults(amos: Table, dwh: Table, keys: string[], orderKey
     ...(firstOrderDiff ? { firstOrderDiff } : {}),
     notes,
     ...(opts.notDrift ? { notDrift: true } : {}),
+    nothingCompared,
   };
 }
 
@@ -297,7 +317,7 @@ export function renderReport(r: CompareReport): string {
   const out: string[] = [];
   const realDiffs = r.cellDiffs.filter((d) => !NOISE.has(d.kind));
   out.push(`## ${r.title}`, "");
-  out.push(`**Result: ${r.pass ? "PASS" : "FAIL"}**`, "");
+  out.push(`**Result: ${r.pass ? "PASS" : r.nothingCompared ? "FAIL (nothing compared)" : "FAIL"}**`, "");
   out.push(`Rows: AMOS ${r.counts.amos}, DWH ${r.counts.dwh}.`, "");
   if (r.amosIncomplete.length) {
     out.push("**The AMOS export looks incomplete:**");
@@ -405,7 +425,13 @@ export function compareCli(root: string, args: string[], log: (s: string) => voi
 
     const packFile = path.join(path.dirname(dwhFile), "pack.json");
     const pack = existsSync(packFile)
-      ? (JSON.parse(readFileSync(packFile, "utf8")) as { source?: string; at?: string; orderKeys?: string[]; warnings?: { code: string }[] })
+      ? (JSON.parse(readFileSync(packFile, "utf8")) as {
+          source?: string;
+          at?: string;
+          orderKeys?: string[];
+          outputs?: { name: string; type: string }[];
+          warnings?: { code: string }[];
+        })
       : undefined;
     const keysFile = path.join(root, "dwh", "verify-keys.yaml");
     const allKeys = existsSync(keysFile) ? ((yaml.parse(readFileSync(keysFile, "utf8")) ?? {}) as Record<string, VerifyKeyEntry>) : {};
@@ -415,6 +441,7 @@ export function compareCli(root: string, args: string[], log: (s: string) => voi
     const orderKeys = pack?.orderKeys ?? [];
     const base: CompareOptions = {
       stringOrderExpected: pack?.warnings?.some((w) => w.code === "W_STRING_ORDER") ?? false,
+      ...(pack?.outputs ? { textColumns: pack.outputs.filter((o) => o.type === "text").map((o) => o.name) } : {}),
       ...(incomplete !== undefined ? { dwhIncomplete: incomplete } : {}),
     };
     const full = compareResults(amos, dwh, matchOn, orderKeys, { ...base, ...(amosRowsShown !== undefined ? { amosRowsShown } : {}), title: "All rows" });
@@ -442,7 +469,12 @@ export function compareCli(root: string, args: string[], log: (s: string) => voi
       );
     }
     const judged = [fixed, within].filter((r): r is CompareReport => r !== undefined);
-    const verdict = judged.length ? judged.every((r) => r.pass) : full.pass;
+    // A cut-short export (screen count ≠ file count) fails the run whichever sections are judged.
+    const cutShort =
+      amosRowsShown !== undefined && amosRowsShown !== amos.rows.length
+        ? `AMOS showed ${amosRowsShown} rows on screen, but the export file has ${amos.rows.length}: the export was cut short. Export again (in smaller pieces if needed).`
+        : undefined;
+    const verdict = (judged.length ? judged.every((r) => r.pass) : full.pass) && cutShort === undefined;
     const head = [
       `# AMOS vs DWH${pack?.source ? `: ${pack.source}` : ""}`,
       "",
@@ -452,6 +484,7 @@ export function compareCli(root: string, args: string[], log: (s: string) => voi
       "",
       `**Overall: ${verdict ? "PASS" : "FAIL"}**${judged.length ? ` (judged on ${[fixed ? "the fixed keys" : "", within ? "the listed rows" : ""].filter(Boolean).join(" and ")}; the all-rows section shows drift and export problems)` : ""}`,
       "",
+      ...(cutShort ? [`**The AMOS export looks incomplete:** ${cutShort}`, ""] : []),
     ];
     const text = [head.join("\n"), ...judged.map(renderReport), renderReport(full)].join("\n");
     const reportFile = path.join(path.dirname(dwhFile), "report.md");
