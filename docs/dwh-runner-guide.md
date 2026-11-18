@@ -38,7 +38,7 @@ To try the page **without the DWH** (made-up rows, nothing is read from the DWH,
 
 ### What the page reads from the DWH
 
-Every **Run preview**, **Download** and **Compare** sends one read-only query (the converted version of the repo query) through the DWH link. In addition, the page asks the DWH once every 5 minutes when its data last changed, for the "DWH data as of …" line at the top:
+Every **Run preview**, **Download** and **Compare** sends one read-only query (the converted version of the repo query) through the DWH link. In addition, **only if you switch it on**, the page asks the DWH at most once every 5 minutes when its data last changed, for the "DWH data as of …" line at the top (otherwise that line says "freshness unknown"). Switch it on by adding the line `DWH_FRESHNESS=1` to the `.env` file yourself, or by running `set DWH_FRESHNESS=1` in a terminal before starting the launcher there. The statement:
 
 ```sql
 SELECT WP_HEADER.MUTATION AS MUTATION_DAY, MAX(WP_HEADER.MUTATION_TIME) AS MUTATION_MS

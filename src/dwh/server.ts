@@ -348,7 +348,6 @@ export async function startServer(opts: ServerOptions): Promise<RunningServer> {
         columnsChecked: new Set(conv.usedColumns).size,
         catalogueTakenAt: ctx.catalogue?.takenAt ?? null,
         outputs: conv.outputs,
-        ...(await freshness()),
       });
     },
 
@@ -389,10 +388,26 @@ export async function startServer(opts: ServerOptions): Promise<RunningServer> {
         const handle = await engine.run(conv, { mode: "export", params, signal: ac.signal });
         const name = `${path.basename(src, ".sql")}_DWH_${stamp(new Date())}.csv`;
         res.writeHead(200, { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="${name}"` });
-        const write = (s: string | Buffer) => (res.write(s) ? Promise.resolve() : new Promise<void>((r) => res.once("drain", r)));
-        await write(csvHeaderBytes());
-        await write(csvLine(handle.columns.map((c) => c.name)));
+        const gone = () => new ConvertError("E_STOPPED", "The download was cancelled, or the connection to the browser was lost.");
+        /** Writes one piece; waits for the browser to keep up, but gives up when it goes away or Stop is pressed. */
+        const write = (s: string | Buffer) =>
+          new Promise<void>((resolve, reject) => {
+            if (res.destroyed || ac.signal.aborted) return reject(gone());
+            if (res.write(s)) return resolve();
+            const cleanup = () => {
+              res.off("drain", onDrain);
+              res.off("close", onGone);
+              ac.signal.removeEventListener("abort", onGone);
+            };
+            const onDrain = () => (cleanup(), resolve());
+            const onGone = () => (cleanup(), reject(gone()));
+            res.once("drain", onDrain);
+            res.once("close", onGone);
+            ac.signal.addEventListener("abort", onGone, { once: true });
+          });
         try {
+          await write(csvHeaderBytes());
+          await write(csvLine(handle.columns.map((c) => c.name)));
           for await (const r of handle.rows) {
             await write(csvLine(r.map((v, i) => formatCell(v, handle.columns[i]?.type ?? "unknown"))));
             written++;

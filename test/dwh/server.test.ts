@@ -8,7 +8,7 @@ import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { startServer, bindAddressFor } from "../../src/dwh/server.ts";
 import { hashCode, loadShareConfig, ShareNotReady, type ShareConfig } from "../../src/dwh/share.ts";
-import { fakeEngine, type FakeOptions, type QueryEngine } from "../../src/dwh/engine.ts";
+import { dwhEngine, fakeEngine, type FakeOptions, type QueryEngine } from "../../src/dwh/engine.ts";
 import { ROOT } from "./helpers.ts";
 
 const PFX = path.join(ROOT, "test", "dwh", "fixtures", "server-test.pfx");
@@ -483,6 +483,55 @@ test("aborted export marks the file incomplete", async () => {
   } finally {
     await s.close();
   }
+});
+
+test("review: a download the browser drops frees the visitor's slot", async () => {
+  const logFile = path.join(logDir, "drop.log");
+  const { s, token } = await unshared(fakeEngine(root, { rows: 300_000 }), { logFile });
+  try {
+    // Ask for a big export, never read it, then drop the connection (tab closed, Save-as cancelled).
+    await new Promise<void>((resolve) => {
+      const body = JSON.stringify({ path: "q_edit.sql", params: {} });
+      const u = new URL(s.url);
+      const req = http.request({ host: u.hostname, port: u.port, path: "/api/export", method: "POST", headers: { "content-type": "application/json", "content-length": Buffer.byteLength(body), "x-runner-token": token } }, (res) => {
+        res.pause();
+        setTimeout(() => {
+          req.destroy();
+          resolve();
+        }, 300);
+      });
+      req.on("error", () => {});
+      req.end(body);
+    });
+    let status = 0;
+    for (let i = 0; i < 40 && status !== 200; i++) {
+      await new Promise((r) => setTimeout(r, 50));
+      status = (await call(s.url, "/api/run", { json: { path: "q_edit.sql", params: {} }, token })).status;
+    }
+    assert.equal(status, 200, "the next run must not be refused as busy");
+    assert.match(readFileSync(logFile, "utf8"), /"action":"export".*"result":"incomplete"/);
+  } finally {
+    await s.close();
+  }
+});
+
+test("review: selecting a query does not wait for the freshness read", async () => {
+  const slow: QueryEngine = { ...fakeEngine(root), freshness: () => new Promise(() => {}) };
+  const { s, token } = await unshared(slow);
+  try {
+    const t0 = Date.now();
+    const r = await call(s.url, "/api/convert", { json: { path: "q_edit.sql" }, token });
+    assert.equal(r.status, 200);
+    assert.ok(Date.now() - t0 < 2000, `took ${Date.now() - t0} ms`);
+  } finally {
+    await s.close();
+  }
+});
+
+test("review: the real engine sends no freshness query unless DWH_FRESHNESS=1", async () => {
+  // No DWH settings at all: without the switch nothing is attempted; with it, the settings are needed.
+  assert.equal(await dwhEngine(root, {}).freshness(), undefined);
+  await assert.rejects(dwhEngine(root, { DWH_FRESHNESS: "1" }).freshness(), /DWH_SERVER/);
 });
 
 test("no response contains the fake DWH_PASSWORD", async () => {

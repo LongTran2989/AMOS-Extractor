@@ -299,8 +299,10 @@ $("run").addEventListener("click", async () => {
   if (!current || !(current.state === "ready" || current.state === "notes")) return;
   setRunning(true, "Running…");
   $("info").textContent = "";
+  const asked = current.path;
   try {
-    const r = await api("/api/run", { path: current.path, params: paramValues() });
+    const r = await api("/api/run", { path: asked, params: paramValues() });
+    if (!current || current.path !== asked) return; // another query was selected meanwhile: never show A's rows under B's name
     echoParams(r.params);
     renderTable(r.columns, r.rows);
     const n = r.rows.length;
@@ -326,9 +328,29 @@ function fileNameOf(res) {
   return m ? m[1] : "dwh-result.csv";
 }
 
+/** The name the server will give the file: <query>_DWH_<yyyymmdd-hhmm>.csv (UTC). */
+function suggestedName(path) {
+  const d = new Date().toISOString();
+  return `${path.replace(/^.*\//, "").replace(/\.sql$/, "")}_DWH_${d.slice(0, 10).replace(/-/g, "")}-${d.slice(11, 16).replace(":", "")}.csv`;
+}
+
 $("export").addEventListener("click", async () => {
   if (!current) return;
   clearError();
+  // "Save as" first, straight from the click: the browser allows it only shortly after a click,
+  // and the DWH may take a while to start answering.
+  let saveHandle = null;
+  if (window.showSaveFilePicker) {
+    try {
+      saveHandle = await window.showSaveFilePicker({ suggestedName: suggestedName(current.path), types: [{ description: "CSV", accept: { "text/csv": [".csv"] } }] });
+    } catch (e) {
+      if (e && e.name === "AbortError") {
+        $("info").textContent = "Download cancelled.";
+        return;
+      }
+      saveHandle = null; // not allowed here: fall back to an ordinary download
+    }
+  }
   await select(current.path);
   if (!current || !(current.state === "ready" || current.state === "notes")) return;
   setRunning(true, "Downloading… (Stop ends it; the file then says it is incomplete)");
@@ -338,17 +360,14 @@ $("export").addEventListener("click", async () => {
   try {
     const res = await fetch("/api/export", { method: "POST", headers: { "X-Runner-Token": TOKEN, "Content-Type": "application/json" }, body: JSON.stringify({ path: current.path, params: paramValues() }) });
     if (!res.ok) await readAnswer(res);
-    const name = fileNameOf(res);
+    const name = saveHandle ? saveHandle.name : fileNameOf(res);
     const reader = res.body.getReader();
-    if (window.showSaveFilePicker) {
+    if (saveHandle) {
       try {
-        const h = await window.showSaveFilePicker({ suggestedName: name, types: [{ description: "CSV", accept: { "text/csv": [".csv"] } }] });
-        file = await h.createWritable();
+        file = await saveHandle.createWritable();
       } catch {
-        await reader.cancel();
-        await api("/api/stop", {}).catch(() => {});
-        $("info").textContent = "Download cancelled.";
-        return;
+        await reader.cancel().catch(() => {});
+        throw new PlainError(`The file ${name} could not be written (is it open in Excel?). Nothing was downloaded.`);
       }
     }
     const parts = [];
@@ -443,7 +462,9 @@ $("cmp-run").addEventListener("click", async () => {
       throw new PlainError("The DWH Runner on the host PC does not answer. Is it still running?");
     }
     const r = await readAnswer(res);
+    if (!current || current.path !== meta.path) return; // another query was selected meanwhile
     $("cmp-result").hidden = false;
+
     $("cmp-verdict").textContent = r.pass ? "PASS: AMOS and the DWH agree" : "FAIL: see the report below";
     $("cmp-verdict").className = `verdict ${r.pass ? "pass" : "fail"}`;
     renderMarkdown($("cmp-report"), r.report);

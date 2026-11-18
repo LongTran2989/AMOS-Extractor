@@ -4,7 +4,7 @@ Walked by the host (plan Phase 4, Task 4.2 step 2 and Task 4.3 steps 3–4). Tic
 
 **Before you start**
 
-- [ ] **Approve the freshness read.** With the real DWH the page sends one extra read-only query every 5 minutes for the "DWH data as of …" line (the statement is in the guide, Part 1). It has not been run yet. Until you approve it, walk the steps with fake data only.
+- [ ] **Freshness read (optional).** The "DWH data as of …" line needs one extra read-only query (the statement is in the guide, Part 1). It is **off** until you switch it on with `DWH_FRESHNESS=1`; it has never been run. Without it the line says "freshness unknown"; everything else works.
 - Fake data: open a terminal in the repo folder, run `set DWH_FAKE=1`, then `"Start DWH Runner.cmd"`. The page shows a yellow "FAKE DATA" badge. For step 10 use `set DWH_FAKE_ROWS=300000` and `set DWH_FAKE_DELAY_MS=40` too, so the download takes long enough to stop.
 - Real DWH: a new terminal (no `DWH_FAKE`), or the desktop shortcut.
 - Steps 13–16 need sharing switched on (guide, "Sharing the page with colleagues"), which needs the IT certificate, the approval to share DWH data, and the access code.

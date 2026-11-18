@@ -47,6 +47,7 @@ export function freshnessInstant(day: unknown, ms: unknown): string | undefined 
 }
 
 const FRESHNESS_CACHE_MS = 5 * 60_000;
+const FRESHNESS_RETRY_MS = 60_000;
 
 /** The real DWH. The pool is opened on first use, so a missing .env shows up as a plain message on Run. */
 export function dwhEngine(root: string, env: NodeJS.ProcessEnv = process.env): QueryEngine {
@@ -62,22 +63,32 @@ export function dwhEngine(root: string, env: NodeJS.ProcessEnv = process.env): Q
     return pool;
   };
   const mapping = () => loadMapping(path.join(root, "dwh", "mapping.yaml"));
-  let fresh: { at: number; value: string | undefined } | undefined;
+  let fresh: { at: number; value: string | undefined; error?: unknown } | undefined;
   return {
     kind: "dwh",
     async run(conv, opts) {
       return runConverted(await getPool(), conv, mapping(), opts);
     },
     async freshness() {
-      if (fresh && Date.now() - fresh.at < FRESHNESS_CACHE_MS) return fresh.value;
-      const m = mapping();
-      const oracle = freshnessOracle(m);
-      assertReadOnlyOracle(oracle);
-      const { tsql } = buildRelayStatement(oracle, "openquery", [], m.linkedServer);
-      const { rows } = await runRelay(await getPool(), tsql);
-      const value = rows[0] ? freshnessInstant(rows[0][0], rows[0][1]) : undefined;
-      fresh = { at: Date.now(), value };
-      return value;
+      // Off unless the host switched it on (DWH_FRESHNESS=1): it is an extra statement the user approves separately.
+      if (env.DWH_FRESHNESS !== "1") return undefined;
+      if (fresh && Date.now() - fresh.at < (fresh.error ? FRESHNESS_RETRY_MS : FRESHNESS_CACHE_MS)) {
+        if (fresh.error) throw fresh.error;
+        return fresh.value;
+      }
+      try {
+        const m = mapping();
+        const oracle = freshnessOracle(m);
+        assertReadOnlyOracle(oracle);
+        const { tsql } = buildRelayStatement(oracle, "openquery", [], m.linkedServer);
+        const { rows } = await runRelay(await getPool(), tsql);
+        const value = rows[0] ? freshnessInstant(rows[0][0], rows[0][1]) : undefined;
+        fresh = { at: Date.now(), value };
+        return value;
+      } catch (e) {
+        fresh = { at: Date.now(), value: undefined, error: e }; // e.g. VPN off: don't wait 15 s on every page load
+        throw e;
+      }
     },
     async refreshCatalogue() {
       return fetchCatalogue(await getPool(), mapping());
