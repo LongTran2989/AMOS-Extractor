@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { copyFileSync, mkdtempSync, readdirSync, readFileSync, rmSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
-import { buildShareConfig, selfSignedScript, shareSetupCli, type SetupIo } from "../../src/dwh/shareSetup.ts";
+import { buildShareConfig, defaultHostNames, linePrompter, selfSignedScript, shareSetupCli, type SetupIo } from "../../src/dwh/shareSetup.ts";
 import { shortcutScript } from "../../src/dwh/shortcut.ts";
 import { loadShareConfig, verifyCode } from "../../src/dwh/share.ts";
 import { ROOT } from "./helpers.ts";
@@ -85,7 +85,7 @@ test("a short or mistyped code writes nothing", async () => {
   try {
     const short = fakeIo(["short", "short"]);
     assert.equal(await shareSetupCli(root, ["--host", "dwh-host"], short, { makeCert: async () => assert.fail("no certificate"), checkPfx: () => true }), 1);
-    assert.match(short.out.join("\n"), /at least 8 characters/);
+    assert.match(short.out.join("\n"), /at least 6 characters/);
     const typo = fakeIo([CODE, `${CODE}x`]);
     assert.equal(await shareSetupCli(root, ["--host", "dwh-host"], typo, { makeCert: async () => assert.fail("no certificate"), checkPfx: () => true }), 1);
     assert.match(typo.out.join("\n"), /did not match/);
@@ -99,7 +99,7 @@ test("PowerShell command line built correctly without running it", () => {
   const s = selfSignedScript({ hostNames: ["dwh-host", "dwh-host.corp.example", "10.1.2.3"], pfxPath: "C:\\Users\\o'neil\\dwh\\local\\runner.pfx" });
   assert.match(s, /New-SelfSignedCertificate /);
   assert.match(s, /-CertStoreLocation 'Cert:\\CurrentUser\\My'/);
-  assert.match(s, /2\.5\.29\.17=\{text\}DNS=dwh-host&DNS=dwh-host\.corp\.example&IPAddress=10\.1\.2\.3/);
+  assert.match(s, /2\.5\.29\.17=\{text\}DNS=dwh-host&DNS=dwh-host\.corp\.example&IPAddress=10\.1\.2\.3&DNS=localhost&IPAddress=127\.0\.0\.1'/, "the host PC's own localhost page needs no warning either");
   assert.match(s, /-Subject 'CN=dwh-host'/);
   assert.match(s, /ConvertTo-SecureString -String \$env:DWH_PFX_PASSPHRASE -Force -AsPlainText/);
   assert.match(s, /Export-PfxCertificate -Cert \$c -FilePath 'C:\\Users\\o''neil\\dwh\\local\\runner\.pfx' -Password \$pw/);
@@ -119,4 +119,28 @@ test("shortcut script: desktop or Startup folder, minimised launcher, quoted pat
   assert.match(st, /GetFolderPath\('Startup'\)/);
   assert.match(st, /\$s\.Arguments = '--no-browser'/);
   assert.match(st, /'C:\\it''s here\\Start DWH Runner\.cmd'/);
+});
+
+test("a six-digit code is accepted", async () => {
+  const root = mkdtempSync(path.join(tmpdir(), "share-"));
+  try {
+    const io = fakeIo(["123456", "123456"]);
+    const code = await shareSetupCli(root, ["--host", "dwh-host"], io, { makeCert: async (_s, pfxPath) => copyFileSync(PFX, pfxPath), checkPfx: () => true });
+    assert.equal(code, 0, io.out.join("\n"));
+    assert.equal(verifyCode("123456", loadShareConfig(path.join(root, "dwh", "local", "share.json"))), true);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("suggested addresses leave out link-local 169.254.x.x", () => {
+  const nics = { eth: [{ family: "IPv4", internal: false, address: "169.254.83.107" }, { family: "IPv4", internal: false, address: "10.4.104.70" }], lo: [{ family: "IPv4", internal: true, address: "127.0.0.1" }] };
+  assert.deepEqual(defaultHostNames(nics, "PC1", "PC1.corp.example"), ["PC1", "PC1.corp.example", "10.4.104.70"]);
+});
+
+test("the code can be piped in when there is no terminal", async () => {
+  const { Readable } = await import("node:stream");
+  const ask = linePrompter(Readable.from(["112", "989\r\n", "112989\n"]), () => {});
+  assert.equal(await ask("code: "), "112989");
+  assert.equal(await ask("again: "), "112989");
 });

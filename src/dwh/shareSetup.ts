@@ -16,7 +16,8 @@ import { FIRST_PORT } from "./server.ts";
 
 export const SHARE_SETUP_USAGE =
   "Usage: npm run dwh:share-setup -- [--host NAME]... [--allow 10.0.0.0/8]... [--pfx it-certificate.pfx] [--off]";
-const MIN_CODE = 8;
+/** Six digits are accepted (user's choice, 2026-11-18): only colleagues reach the WAN, and five wrong codes lock a PC out for 15 minutes. */
+const MIN_CODE = 6;
 
 export function buildShareConfig(o: { code: string; hostNames: string[]; allowCidrs: string[]; pfxPath: string; pfxPassphrase: string }): ShareConfig {
   const { hash, salt } = hashCode(o.code);
@@ -31,7 +32,9 @@ const psQuote = (s: string) => `'${s.replace(/'/g, "''")}'`;
 export function selfSignedScript(o: { hostNames: string[]; pfxPath: string }): string {
   if (!o.hostNames.length) throw new Error("Give at least one host name (--host).");
   for (const h of o.hostNames) if (!IPV4.test(h) && !NAME.test(h)) throw new Error(`"${h}" is not a valid host name or IPv4 address.`);
-  const san = o.hostNames.map((h) => (IPV4.test(h) ? `IPAddress=${h}` : `DNS=${h}`)).join("&");
+  // localhost / 127.0.0.1 too: the launcher opens https://localhost on the host PC itself.
+  const all = [...o.hostNames, ...["localhost", "127.0.0.1"].filter((h) => !o.hostNames.some((x) => x.toLowerCase() === h))];
+  const san = all.map((h) => (IPV4.test(h) ? `IPAddress=${h}` : `DNS=${h}`)).join("&");
   const cn = o.hostNames.find((h) => !IPV4.test(h)) ?? o.hostNames[0]!;
   return [
     "$ErrorActionPreference = 'Stop'",
@@ -42,11 +45,47 @@ export function selfSignedScript(o: { hostNames: string[]; pfxPath: string }): s
   ].join("\n");
 }
 
-/** This PC's name and IPv4 addresses (what colleagues may type). */
-export function defaultHostNames(): string[] {
-  const names = [hostname()];
-  for (const list of Object.values(networkInterfaces())) for (const a of list ?? []) if (a.family === "IPv4" && !a.internal) names.push(a.address);
+type Nics = Record<string, { family: string | number; internal: boolean; address: string }[] | undefined>;
+
+/** This PC's name (and full DNS name if given) and IPv4 addresses, without link-local 169.254.x.x (no network). */
+export function defaultHostNames(nics: Nics = networkInterfaces() as Nics, host: string = hostname(), fqdn?: string): string[] {
+  const names = [host, ...(fqdn && fqdn.toLowerCase() !== host.toLowerCase() ? [fqdn] : [])];
+  for (const list of Object.values(nics)) for (const a of list ?? []) if ((a.family === "IPv4" || a.family === 4) && !a.internal && !a.address.startsWith("169.254.")) names.push(a.address);
   return [...new Set(names)];
+}
+
+/** Reads answers line by line from a pipe (no terminal), e.g. when the code is piped in. */
+export function linePrompter(input: NodeJS.ReadableStream, write: (s: string) => void): (question: string) => Promise<string> {
+  const lines: string[] = [];
+  const waiting: ((l: string) => void)[] = [];
+  let buf = "";
+  let ended = false;
+  const push = (l: string) => {
+    const w = waiting.shift();
+    if (w) w(l);
+    else lines.push(l);
+  };
+  input.on("data", (c: Buffer | string) => {
+    buf += c.toString();
+    let i: number;
+    while ((i = buf.indexOf("\n")) >= 0) {
+      push(buf.slice(0, i).replace(/\r$/, ""));
+      buf = buf.slice(i + 1);
+    }
+  });
+  input.on("end", () => {
+    ended = true;
+    if (buf) push(buf.replace(/\r$/, ""));
+    buf = "";
+    while (waiting.length) waiting.shift()!("");
+  });
+  return (question) => {
+    write(question);
+    write("\n");
+    if (lines.length) return Promise.resolve(lines.shift()!);
+    if (ended) return Promise.resolve("");
+    return new Promise((r) => waiting.push(r));
+  };
 }
 
 export interface SetupIo {
@@ -188,5 +227,7 @@ export async function shareSetupCli(root: string, args: string[], io: SetupIo, d
 const isMain = process.argv[1] !== undefined && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMain) {
   const root = path.resolve(import.meta.dirname, "..", "..");
-  shareSetupCli(root, process.argv.slice(2), { log: (s) => console.log(s), askHidden: askHiddenTty }).then((code) => process.exit(code));
+  const askHidden = process.stdin.isTTY ? askHiddenTty : linePrompter(process.stdin, (s) => process.stdout.write(s));
+  shareSetupCli(root, process.argv.slice(2), { log: (s) => console.log(s), askHidden }).then((code) => process.exit(code));
+
 }

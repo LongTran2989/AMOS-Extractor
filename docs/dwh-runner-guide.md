@@ -60,7 +60,7 @@ Do this only after IT has approved sharing DWH data this way.
    - with an IT certificate: `npm run dwh:share-setup -- --pfx C:\path\to\it-certificate.pfx`
    - without one: `npm run dwh:share-setup`
 
-   It shows the addresses colleagues can use (this PC's name and IP address; add others with `--host name`), asks you to choose the **access code** twice (at least 8 characters; nothing is shown while you type), and for an IT certificate asks its password. Only a scrambled form (hash) of the code is saved, in `dwh/local/share.json`, which is never committed. Optional: `--allow 10.20.0.0/16` lets only that network connect.
+   It shows the addresses colleagues can use (this PC's name and IP address; add others with `--host name`), asks you to choose the **access code** twice (at least 6 characters; nothing is shown while you type), and for an IT certificate asks its password. Only a scrambled form (hash) of the code is saved, in `dwh/local/share.json`, which is never committed. Optional: `--allow 10.20.0.0/16` lets only that network connect.
 3. **Firewall.** Ask IT to allow the port on this PC, for the company network only:
 
    ```
