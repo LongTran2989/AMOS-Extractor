@@ -32,6 +32,8 @@ export interface CompareOptions {
   dwhIncomplete?: string;
   /** Section title in the report. */
   title?: string;
+  /** The rows compared should be in both files (--within), so one-side rows are not drift. */
+  notDrift?: boolean;
 }
 
 export interface CompareReport {
@@ -55,6 +57,7 @@ export interface CompareReport {
   orderExplained: boolean;
   firstOrderDiff?: { position: number; amos: string; dwh: string };
   notes: string[];
+  notDrift?: boolean;
 }
 
 /** Differences that are export formatting only and never fail the pass criterion (A.7 #6). */
@@ -124,6 +127,20 @@ export function restrictTo(t: Table, column: string, values: string[]): Table {
   if (i < 0) throw new Error(`Column ${column} (from dwh/verify-keys.yaml) is not in the file.`);
   const keep = new Set(values.map((v) => v.trim()));
   return { header: t.header, rows: t.rows.filter((r) => keep.has(clean(r[i]).trim())) };
+}
+
+/**
+ * Keeps the rows whose `column` value is listed in the same column of `list` (for example the
+ * DWH workpacks unchanged since a test copy was taken). Values are compared after normalising,
+ * so `1'596'611` matches `1596611`.
+ */
+export function restrictToListed(t: Table, column: string, list: Table, listName = "The list file"): Table {
+  const i = columnIndex(t, column);
+  if (i < 0) throw new Error(`Column ${column} is not in the file.`);
+  const j = columnIndex(list, column);
+  if (j < 0) throw new Error(`${listName} has no column ${column} (it needs the match column to say which rows to keep).`);
+  const keep = new Set(list.rows.map((r) => norm(r[j])));
+  return { header: t.header, rows: t.rows.filter((r) => keep.has(norm(r[i]))) };
 }
 
 /** Splits off the "INCOMPLETE: …" line that dwh:run writes at the end of a cut-off CSV. */
@@ -263,6 +280,7 @@ export function compareResults(amos: Table, dwh: Table, keys: string[], orderKey
     orderExplained,
     ...(firstOrderDiff ? { firstOrderDiff } : {}),
     notes,
+    ...(opts.notDrift ? { notDrift: true } : {}),
   };
 }
 
@@ -302,7 +320,9 @@ export function renderReport(r: CompareReport): string {
   if (r.driftKeys.length) {
     const shown = r.driftKeys.slice(0, MAX_KEYS_SHOWN).join(", ") + (r.driftKeys.length > MAX_KEYS_SHOWN ? ", …" : "");
     out.push(
-      `These are ${r.driftKeys.length} values of ${r.keys[0]}: ${shown}. If AMOS and the DWH were not read at the same moment, this is likely drift: those rows changed between the two runs (a present-day status, for example). Otherwise they are real differences.`,
+      r.notDrift
+        ? `These are ${r.driftKeys.length} values of ${r.keys[0]}: ${shown}. These rows should be in both files, so this is not drift: AMOS does not have them or does not show them to you, or they are real differences.`
+        : `These are ${r.driftKeys.length} values of ${r.keys[0]}: ${shown}. If AMOS and the DWH were not read at the same moment, this is likely drift: those rows changed between the two runs (a present-day status, for example). Otherwise they are real differences.`,
     );
   }
   out.push("");
@@ -345,7 +365,8 @@ export function readTableFile(file: string): Table {
   return parseCsv(buf.toString("utf8"));
 }
 
-export const COMPARE_USAGE = "Usage: npm run dwh:compare -- <amos.csv|amos.xlsx> <dwh.csv> [--key=COL1,COL2] [--amos-rows N]";
+export const COMPARE_USAGE =
+  "Usage: npm run dwh:compare -- <amos.csv|amos.xlsx> <dwh.csv> [--key=COL1,COL2] [--amos-rows N] [--within rows.csv]";
 
 interface VerifyKeyEntry {
   match_on?: string[];
@@ -359,6 +380,7 @@ export function compareCli(root: string, args: string[], log: (s: string) => voi
     const files: string[] = [];
     let keys: string[] | undefined;
     let amosRowsShown: number | undefined;
+    let withinFile: string | undefined;
     for (let i = 0; i < args.length; i++) {
       const a = args[i]!;
       const [flag, inline] = a.startsWith("--") && a.includes("=") ? [a.slice(0, a.indexOf("=")), a.slice(a.indexOf("=") + 1)] : [a, undefined];
@@ -372,7 +394,8 @@ export function compareCli(root: string, args: string[], log: (s: string) => voi
         const v = value().replace(/['’,\s]/g, "");
         if (!/^\d+$/.test(v)) throw new Error(`--amos-rows needs a whole number (got "${v}").`);
         amosRowsShown = Number(v);
-      } else if (flag.startsWith("--")) throw new Error(`Unknown option ${flag}. ${COMPARE_USAGE}`);
+      } else if (flag === "--within") withinFile = value();
+      else if (flag.startsWith("--")) throw new Error(`Unknown option ${flag}. ${COMPARE_USAGE}`);
       else files.push(a);
     }
     if (files.length !== 2) throw new Error(COMPARE_USAGE);
@@ -405,7 +428,21 @@ export function compareCli(root: string, args: string[], log: (s: string) => voi
         title: `Fixed keys (${values.length} values of ${col}, from dwh/verify-keys.yaml)`,
       });
     }
-    const verdict = fixed ? fixed.pass : full.pass;
+    let within: CompareReport | undefined;
+    if (withinFile) {
+      const list = splitIncomplete(readTableFile(withinFile)).table;
+      const col = matchOn[0]!;
+      within = compareResults(restrictToListed(amos, col, list, withinFile), restrictToListed(dwh, col, list, withinFile), matchOn, orderKeys, {
+        ...base,
+        title: `Rows listed in ${withinFile} (${list.rows.length})`,
+        notDrift: true,
+      });
+      within.notes.unshift(
+        `Only the ${list.rows.length} values of ${col} listed in ${withinFile} are compared here. They are rows that should be the same in both systems (for example unchanged since the AMOS copy was taken), so a difference or a one-side row here is not drift.`,
+      );
+    }
+    const judged = [fixed, within].filter((r): r is CompareReport => r !== undefined);
+    const verdict = judged.length ? judged.every((r) => r.pass) : full.pass;
     const head = [
       `# AMOS vs DWH${pack?.source ? `: ${pack.source}` : ""}`,
       "",
@@ -413,10 +450,10 @@ export function compareCli(root: string, args: string[], log: (s: string) => voi
       `AMOS file: ${amosFile}  `,
       `DWH file: ${dwhFile}`,
       "",
-      `**Overall: ${verdict ? "PASS" : "FAIL"}**${fixed ? " (judged on the fixed keys; the all-rows section shows drift and export problems)" : ""}`,
+      `**Overall: ${verdict ? "PASS" : "FAIL"}**${judged.length ? ` (judged on ${[fixed ? "the fixed keys" : "", within ? "the listed rows" : ""].filter(Boolean).join(" and ")}; the all-rows section shows drift and export problems)` : ""}`,
       "",
     ];
-    const text = [head.join("\n"), ...(fixed ? [renderReport(fixed)] : []), renderReport(full)].join("\n");
+    const text = [head.join("\n"), ...judged.map(renderReport), renderReport(full)].join("\n");
     const reportFile = path.join(path.dirname(dwhFile), "report.md");
     writeFileSync(reportFile, text);
     log(text);

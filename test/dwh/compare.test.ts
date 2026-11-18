@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
-import { compareCli, compareResults, renderReport, restrictTo, splitIncomplete, type DiffKind } from "../../src/dwh/compare.ts";
+import { compareCli, compareResults, renderReport, restrictTo, restrictToListed, splitIncomplete, type DiffKind } from "../../src/dwh/compare.ts";
 import type { Table } from "../../src/stitch/stitch.ts";
 
 const H = ["z_WP_ID", "z_WP_NO", "z_WP_STATION", "z_WP_ITEM_COUNT"];
@@ -220,4 +220,60 @@ test("dwh:compare without arguments prints the usage", () => {
   const lines: string[] = [];
   assert.equal(compareCli(tmpdir(), [], (s) => lines.push(s)), 1);
   assert.match(lines.join("\n"), /Usage/);
+});
+
+test("restrictToListed keeps the rows whose key is in the list, numbers compared after normalising", () => {
+  const amos = base();
+  amos.header = H.map((h) => h.toLowerCase());
+  amos.rows[0]![0] = "1'596'611";
+  const list = t(["z_wp_id", "z_WP_NO"], ["1596611", "x"], ["103", "y"]);
+  assert.deepEqual(restrictToListed(amos, "z_WP_ID", list).rows.map((r) => r[1]), ["A-1", "B-1"]);
+});
+
+test("restrictToListed names the list file's missing column in plain words", () => {
+  assert.throws(() => restrictToListed(base(), "z_WP_ID", t(["other"], ["1"]), "unchanged.csv"), /unchanged\.csv has no column z_WP_ID/);
+});
+
+test("dwh:compare --within judges also the listed rows and fails when one of them differs", () => {
+  const root = mkdtempSync(path.join(tmpdir(), "cmp-"));
+  try {
+    const dir = path.join(root, "verify", "q");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(path.join(dir, "amos.csv"), "z_wp_id,z_wp_no,z_wp_station,z_wp_item_count\r\n101,A-1,HAN,3\r\n102,A-2,SGN,0\r\n109,Z-9,HAN,1\r\n");
+    writeFileSync(path.join(dir, "dwh.csv"), '"z_WP_ID","z_WP_NO","z_WP_STATION","z_WP_ITEM_COUNT"\r\n"101","A-1","HAN","3"\r\n"102","A-2","SGN","1"\r\n"110","Z-10","HAN","1"\r\n');
+    writeFileSync(path.join(dir, "unchanged.csv"), '"z_WP_ID","z_WP_NO"\r\n"101","A-1"\r\n"102","A-2"\r\n');
+    const lines: string[] = [];
+    const code = compareCli(root, [path.join(dir, "amos.csv"), path.join(dir, "dwh.csv"), "--within", path.join(dir, "unchanged.csv")], (s) => lines.push(s));
+    const out = lines.join("\n");
+    assert.equal(code, 1, out);
+    assert.match(out, /Rows listed in .*unchanged\.csv \(2\)/);
+    assert.match(out, /not drift/);
+    assert.match(out, /z_WP_ITEM_COUNT/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("dwh:compare --within passes when every listed row matches", () => {
+  const root = mkdtempSync(path.join(tmpdir(), "cmp-"));
+  try {
+    const dir = path.join(root, "verify", "q");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(path.join(dir, "amos.csv"), "z_wp_id,z_wp_no\r\n101,A-1\r\n109,Z-9\r\n");
+    writeFileSync(path.join(dir, "dwh.csv"), '"z_WP_ID","z_WP_NO"\r\n"101","A-1"\r\n"110","Z-10"\r\n');
+    writeFileSync(path.join(dir, "unchanged.csv"), '"z_WP_ID"\r\n"101"\r\n');
+    const lines: string[] = [];
+    const code = compareCli(root, [path.join(dir, "amos.csv"), path.join(dir, "dwh.csv"), "--within", path.join(dir, "unchanged.csv")], (s) => lines.push(s));
+    assert.equal(code, 0, lines.join("\n"));
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("rows that should be in both files are not called drift", () => {
+  const amos = t(H, ["101", "A-1", "HAN", "3"]);
+  const dwh = t(H, ["101", "A-1", "HAN", "3"], ["105", "C-2", "HAN", "1"]);
+  const text = renderReport(compareResults(amos, dwh, KEYS, ORDER, { notDrift: true }));
+  assert.doesNotMatch(text, /likely drift/);
+  assert.match(text, /not drift/);
 });
