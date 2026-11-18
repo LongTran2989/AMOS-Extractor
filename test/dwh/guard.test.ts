@@ -103,9 +103,9 @@ test("named WINDOW, window frames, RECURSIVE and MATERIALIZED are rejected", () 
   refused("WITH c AS\nMATERIALIZED (SELECT wp_header.wpno FROM wp_header) SELECT c.wpno FROM c", "E_UNSUPPORTED", 2);
 });
 
-test("all 15 root queries and 12 generated queries pass the guard", () => {
+test("all 16 root queries and 12 generated queries pass the guard", () => {
   const files = realSources();
-  assert.equal(files.length, 27);
+  assert.equal(files.length, 28);
   for (const f of files) {
     const warnings = guard(preprocess(readSource(f)).sql);
     assert.deepEqual(warnings, [], f);

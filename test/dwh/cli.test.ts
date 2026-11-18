@@ -46,7 +46,7 @@ test("manifest lists the two probe files as refused with E_LINT", () => {
     assert.equal(entry(m, p).code, "E_LINT", p);
     assert.ok(entry(m, p).plain.length > 0);
   }
-  assert.equal(m.sources.length, 27);
+  assert.equal(m.sources.length, 28);
   assert.equal(entry(m, "extract_work_order.sql").code, "E_DUPLICATE_OUTPUT");
 });
 
