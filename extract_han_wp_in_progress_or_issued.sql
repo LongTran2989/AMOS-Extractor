@@ -1,8 +1,11 @@
--- Workpacks at station HAN that are In Progress or Issued now (present-day status, no date filter).
--- Status ids (schema/workpack.yaml notes): In Progress = 11. Issued = 112, 114.
--- Status 115 (In Progress) is left out on purpose.
+-- Workpacks that are In Progress or Issued now (present-day status, no date filter).
+-- Status ids (schema/workpack.yaml notes): In Progress = 11, 115. Issued = 112, 114.
 -- wp_status is the present-day status, so this answers "now", not a past date.
--- Only aircraft of operator HVN (wp_header.ac_operator).
+-- Filters are placeholders, filled in by the app (or --param NAME=value):
+--   STATION, AC_OPERATOR, AC_REGISTR, DESCRIPTION: one value each.
+--   WP_STATUS_1 .. WP_STATUS_4: one status id each; repeat a value to use fewer than four.
+-- Each value must sit in quotes and use only A-Z a-z 0-9, space, . _ / - (max 100 characters)
+-- in openquery mode, so a comma or apostrophe in a description is refused.
 
 SELECT
     wp_header.wpno_i AS z_WP_ID,
@@ -20,7 +23,9 @@ SELECT
     wp_header.mutation,
     wp_header.mutation_time
 FROM wp_header
-WHERE wp_header.station = 'HAN'
-  AND wp_header.wp_status IN (11, 112, 114)
-  AND wp_header.ac_operator = 'HVN'
+WHERE wp_header.station = '<STATION>'
+  AND wp_header.wp_status IN ('<WP_STATUS_1>', '<WP_STATUS_2>', '<WP_STATUS_3>', '<WP_STATUS_4>')
+  AND wp_header.ac_operator = '<AC_OPERATOR>'
+  AND wp_header.ac_registr = '<AC_REGISTR>'
+  AND wp_header.description = '<DESCRIPTION>'
 ORDER BY wp_header.wpno;

@@ -772,7 +772,7 @@
     },
     {
       "source": "extract_han_wp_in_progress_or_issued.sql",
-      "sourceSha256": "27d16a94c7ac979b041c5251a7a5a177531cd823da86649b9c0cc6fdb829a021",
+      "sourceSha256": "0bd64424246bc7bbd62bb2c8b0161503a0df782d7dcb8062297dabd8c7f98003",
       "status": "converted",
       "output": "queries/dwh/extract_han_wp_in_progress_or_issued.sql",
       "available": true,
@@ -783,7 +783,40 @@
           "plain": "Text sorts, and text comparisons with <, >, BETWEEN, may differ slightly from AMOS (the DWH orders text by character code)."
         }
       ],
-      "placeholders": [],
+      "placeholders": [
+        {
+          "name": "STATION",
+          "maxLength": 100
+        },
+        {
+          "name": "WP_STATUS_1",
+          "maxLength": 100
+        },
+        {
+          "name": "WP_STATUS_2",
+          "maxLength": 100
+        },
+        {
+          "name": "WP_STATUS_3",
+          "maxLength": 100
+        },
+        {
+          "name": "WP_STATUS_4",
+          "maxLength": 100
+        },
+        {
+          "name": "AC_OPERATOR",
+          "maxLength": 100
+        },
+        {
+          "name": "AC_REGISTR",
+          "maxLength": 100
+        },
+        {
+          "name": "DESCRIPTION",
+          "maxLength": 100
+        }
+      ],
       "outputs": [
         {
           "name": "z_WP_ID",
@@ -862,7 +895,7 @@
         "wp_header.wpno",
         "wp_header.wpno_i"
       ],
-      "execLength": 577
+      "execLength": 741
     },
     {
       "source": "extract_parts_standalone_no_cml_no_alternate.sql",
