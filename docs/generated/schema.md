@@ -178,6 +178,10 @@ A maintenance workpack (WP) planned at a station, with its status and responsibl
 | `wp_header.ac_typ` | wp_ac_type | (proposed) | AT (varchar(6)) | documented | Type of the affected A/C |
 | `wp_header.ac_model` | wp_ac_model | (proposed) | AT (varchar(6)) | documented | A/C model |
 | `wp_header.wp_type` | wp_type | (proposed) | INT_0 (int4) | documented | Type of the Work Package: 0 = PLANNING Work Package 1 = CRM Work Package Enum: 0=PLANNING Work Package, 1=CRM Work Package |
+| `wp_header.mutation` | wp_mutation_date | (proposed) | DATE_INT (int4) | documented | Date of the last change to this WP row (days since 1971-12-31). The DWH can stop updating a row; compare with the AMOS value. |
+| `wp_header.mutation_time` | wp_mutation_time | (proposed) | TIMI (int4) | documented | Time of the last change to this WP row (milliseconds since the start of the day). Use with wp_header.mutation. |
+| `wp_header.mpno` | wp_mp_no | (proposed) | ALPHANUM (varchar(25)) | documented | Maintenance Program set for the aircraft (free text for non-managed aircraft). |
+| `wp_header.mp_revision` | wp_mp_revision | (proposed) | INT (int4) | documented | Revision of the used Maintenance Program. |
 | `wp_header.hidden` | wp_maint_class | (proposed) | ALPHANUM (varchar(1)) | documented | Defines the visibility of the Workpackage. Possible values are: H: Heavy-Maintenance L: Line-Maintenance I: Hidden Empty or any other value: Unclassified Enum: H=Heavy-Maintenance, L=Line-Maintenance, I=Hidden |
 | `wp_header.responsible` | wp_responsible | (proposed) | SG (varchar(8)) | documented | Sign (user code) of the responsible person. |
 | `wp_header.wp_status` | wp_status_id | z_WP_STATUS_ID | INT (int4) | documented | Current (present-day) status of the WP. Do NOT use to filter historical activity; use start/end dates. Approved 2026-11-17 (needed to filter by status in the DWH, which has no wp_status table). |

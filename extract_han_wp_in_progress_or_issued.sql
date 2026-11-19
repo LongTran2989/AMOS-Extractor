@@ -16,7 +16,9 @@ SELECT
     wp_header.ac_registr AS z_AC_REG,
     wp_header.ac_typ,
     wp_header.mpno,
-    wp_header.mp_revision
+    wp_header.mp_revision,
+    wp_header.mutation,
+    wp_header.mutation_time
 FROM wp_header
 WHERE wp_header.station = 'HAN'
   AND wp_header.wp_status IN (11, 112, 114)

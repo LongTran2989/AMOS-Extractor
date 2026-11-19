@@ -78,6 +78,30 @@ fields:
       source: csv
       values: { "0": PLANNING Work Package, "1": CRM Work Package }
 
+  - column: wp_header.mutation
+    name_status: proposed
+    proposed_name: wp_mutation_date
+    trust: documented
+    meaning: Date of the last change to this WP row (days since 1971-12-31). The DWH can stop updating a row; compare with the AMOS value.
+
+  - column: wp_header.mutation_time
+    name_status: proposed
+    proposed_name: wp_mutation_time
+    trust: documented
+    meaning: Time of the last change to this WP row (milliseconds since the start of the day). Use with wp_header.mutation.
+
+  - column: wp_header.mpno
+    name_status: proposed
+    proposed_name: wp_mp_no
+    trust: documented
+    meaning: Maintenance Program set for the aircraft (free text for non-managed aircraft).
+
+  - column: wp_header.mp_revision
+    name_status: proposed
+    proposed_name: wp_mp_revision
+    trust: documented
+    meaning: Revision of the used Maintenance Program.
+
   - column: wp_header.hidden
     name_status: proposed
     proposed_name: wp_maint_class
